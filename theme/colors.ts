@@ -12,7 +12,7 @@ const lightColors = {
   popoverForeground: '#000000',
 
   // Primary colors
-  primary: '#18181b',
+  primary: '#405FF2',
   primaryForeground: '#FFFFFF',
 
   // Secondary colors
