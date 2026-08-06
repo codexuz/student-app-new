@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { Stack } from 'expo-router';
 
-import { hasSeenOnboarding } from '@/lib/onboarding';
+import { getOnboardingSnapshot, hasSeenOnboarding, subscribeToOnboarding } from '@/lib/onboarding';
 
 export default function AuthLayout() {
-  const [seenOnboarding, setSeenOnboarding] = useState<boolean | null>(null);
+  const seenOnboarding = useSyncExternalStore(subscribeToOnboarding, getOnboardingSnapshot);
 
   useEffect(() => {
-    hasSeenOnboarding().then(setSeenOnboarding);
+    hasSeenOnboarding();
   }, []);
 
   if (seenOnboarding === null) return null;
@@ -20,6 +20,9 @@ export default function AuthLayout() {
 
       <Stack.Protected guard={seenOnboarding}>
         <Stack.Screen name='sign-in' />
+        <Stack.Screen name='forgot-password' />
+        <Stack.Screen name='verify-reset-code' />
+        <Stack.Screen name='reset-password' />
       </Stack.Protected>
     </Stack>
   );

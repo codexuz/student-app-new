@@ -1,3 +1,4 @@
+import { ToastProvider } from '@/components/ui/toast';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useInAppUpdates } from '@/hooks/useInAppUpdates';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -41,11 +42,13 @@ export default function RootLayout() {
             rather than erroring — the toggle itself still works there. */}
         <PreferencesProvider>
           <ThemeProvider storage={SecureStore}>
-            <AuthProvider>
-              <NotificationPermissionProvider>
-                <RootNavigator />
-              </NotificationPermissionProvider>
-            </AuthProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <NotificationPermissionProvider>
+                  <RootNavigator />
+                </NotificationPermissionProvider>
+              </AuthProvider>
+            </ToastProvider>
           </ThemeProvider>
         </PreferencesProvider>
       </SafeAreaProvider>
@@ -113,6 +116,7 @@ function RootNavigator() {
           <Stack.Screen name='my-recording' options={{ headerShown: true, title: 'My Recordings' }} />
           <Stack.Screen name='edit-profile' options={{ headerShown: true, title: 'Edit Profile' }} />
           <Stack.Screen name='certificates' options={{ headerShown: true, title: 'Certificates' }} />
+          <Stack.Screen name='payments' options={{ headerShown: true, title: 'Payment History' }} />
         </Stack.Protected>
 
         <Stack.Protected guard={isAuthenticated && shouldPromptForNotifications}>

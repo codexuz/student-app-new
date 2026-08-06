@@ -114,6 +114,7 @@ export default function ProfileScreen() {
     // payment record) are both just "nothing to show" — the card hides either way.
     getPaymentStatus(userId)
       .then((status) => {
+        console.log(status)
         if (isMounted) setPaymentStatus(status);
       })
       .catch(() => {
@@ -301,11 +302,11 @@ export default function ProfileScreen() {
 
     const { icon, color, label, amount, subtitle } = (() => {
       switch (paymentStatus.paymentStatus) {
-        case 'completed':
+        case 'upcoming':
           return {
             icon: Check,
             color: green,
-            label: 'Completed',
+            label: 'Paid',
             amount: paymentStatus.totalPaid,
             subtitle: 'Fully paid',
           };
@@ -337,22 +338,24 @@ export default function ProfileScreen() {
     })();
 
     return (
-      <Card style={styles.paymentCard}>
-        <View style={styles.paymentRow}>
-          <View style={[styles.paymentIconBadge]}>
-            <Icon name={icon} size={23} color={color} />
+      <Pressable onPress={() => router.push('/payments')}>
+        <Card style={styles.paymentCard}>
+          <View style={styles.paymentRow}>
+            <View style={[styles.paymentIconBadge]}>
+              <Icon name={icon} size={23} color={color} />
+            </View>
+            <View style={styles.paymentTextBlock}>
+              <Text variant='body' style={styles.paymentTitle} numberOfLines={1}>
+                {amount.toLocaleString()} UZS
+              </Text>
+              <Text variant='caption' style={styles.paymentStatusLabel}>
+                {label}
+              </Text>
+            </View>
+            <Icon name={ArrowUpRight} size={22} color={text} />
           </View>
-          <View style={styles.paymentTextBlock}>
-            <Text variant='body' style={styles.paymentTitle} numberOfLines={1}>
-              {amount.toLocaleString()} UZS
-            </Text>
-            <Text variant='caption' style={styles.paymentStatusLabel}>
-            {label}
-          </Text>
-          </View>
-          <Icon name={ArrowUpRight} size={22} color={text} />
-        </View>
-      </Card>
+        </Card>
+      </Pressable>
     );
   };
 
