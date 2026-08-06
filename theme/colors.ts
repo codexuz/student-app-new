@@ -6,42 +6,47 @@ const BRAND_BLUE = '#1055F8';
 const lightColors = {
   // Base colors — a near-black navy rather than pure #000 reads calmer and
   // more "designed" for long reading/study sessions than stark black-on-white.
-  background: '#FFFFFF',
+  // A faint blue tint on the page (rather than flat white) is what lets white
+  // cards read as elevated surfaces instead of disappearing into the background.
+  background: '#F5F8FF',
   foreground: '#0B1220',
 
-  // Card colors — a faint cool tint instead of a flat gray gives cards a
-  // touch of depth against a pure white background.
-  card: '#F4F6FB',
+  // Card colors — pure white, so cards pop off the tinted background using
+  // just their shadow, no border needed.
+  card: '#FFFFFF',
   cardForeground: '#0B1220',
 
-  // Popover colors
-  popover: '#F4F6FB',
+  // Popover colors — same surface as a card.
+  popover: '#FFFFFF',
   popoverForeground: '#0B1220',
 
   // Primary colors
   primary: BRAND_BLUE,
   primaryForeground: '#FFFFFF',
 
-  // Secondary colors — distinct from `card`/`accent` so grouped UI (e.g.
-  // secondary buttons) doesn't visually collapse into the same surface.
-  secondary: '#EEF1F8',
+  // Secondary colors — a light blue wash, distinct from the plain-white
+  // `card` surface, for things that should read as "on brand" but subordinate
+  // to a primary action (secondary buttons, badges).
+  secondary: '#EAF0FE',
   secondaryForeground: '#1E293B',
 
   // Muted colors
   muted: '#64748B33',
   mutedForeground: '#64748B',
 
-  // Accent colors — a light wash of the brand blue, for selected/hover states.
-  accent: '#E8EEFE',
+  // Accent colors — a stronger wash of the brand blue than `secondary`, for
+  // selected/hover states that need to read as more active.
+  accent: '#DCE7FE',
   accentForeground: BRAND_BLUE,
 
   // Destructive colors
   destructive: '#DC2626',
   destructiveForeground: '#FFFFFF',
 
-  // Border and input
-  border: '#E2E8F0',
-  input: '#E2E8F0',
+  // Border and input — tinted to match the page background rather than a
+  // flat neutral gray, so borders on white cards blend in instead of fighting it.
+  border: '#DEE6F5',
+  input: '#DEE6F5',
   ring: '#94A3B8',
 
   // Text colors
