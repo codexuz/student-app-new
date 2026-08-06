@@ -114,7 +114,6 @@ export default function ProfileScreen() {
     // payment record) are both just "nothing to show" — the card hides either way.
     getPaymentStatus(userId)
       .then((status) => {
-        console.log(status)
         if (isMounted) setPaymentStatus(status);
       })
       .catch(() => {
