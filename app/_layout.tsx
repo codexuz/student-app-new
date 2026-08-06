@@ -7,6 +7,7 @@ import {
   NotificationPermissionProvider,
   useNotificationPermission,
 } from '@/providers/notification-permission-provider';
+import { PreferencesProvider } from '@/providers/preferences-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
 import { Colors } from '@/theme/colors';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -38,13 +39,15 @@ export default function RootLayout() {
         {/* `storage` makes the light/dark choice survive a restart. SecureStore
             has no web implementation, so on web this degrades to no persistence
             rather than erroring — the toggle itself still works there. */}
-        <ThemeProvider storage={SecureStore}>
-          <AuthProvider>
-            <NotificationPermissionProvider>
-              <RootNavigator />
-            </NotificationPermissionProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <PreferencesProvider>
+          <ThemeProvider storage={SecureStore}>
+            <AuthProvider>
+              <NotificationPermissionProvider>
+                <RootNavigator />
+              </NotificationPermissionProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </PreferencesProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -107,6 +110,9 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={isAuthenticated && !shouldPromptForNotifications}>
           <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+          <Stack.Screen name='my-recording' options={{ headerShown: true, title: 'My Recordings' }} />
+          <Stack.Screen name='edit-profile' options={{ headerShown: true, title: 'Edit Profile' }} />
+          <Stack.Screen name='certificates' options={{ headerShown: true, title: 'Certificates' }} />
         </Stack.Protected>
 
         <Stack.Protected guard={isAuthenticated && shouldPromptForNotifications}>

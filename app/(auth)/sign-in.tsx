@@ -13,7 +13,7 @@ import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { ApiError } from '@/lib/api/client';
-import { digitsOnly, formatNationalNumber, isCompleteNationalNumber, toE164, UZ_COUNTRY_CODE } from '@/lib/phone';
+import { digitsOnly, formatNationalNumber, isCompleteNationalNumber, toE164 } from '@/lib/phone';
 import { useAuth } from '@/providers/auth-provider';
 import { SPACING } from '@/theme/globals';
 

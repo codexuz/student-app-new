@@ -1,9 +1,11 @@
 import { apiRequest } from '@/lib/api/client';
 
 export interface PaymentStatus {
-  paymentStatus: 'overdue' | 'active' | string;
-  pendingAmount?: number;
-  daysUntilNextPayment?: number;
+  paymentStatus: 'completed' | 'pending' | 'overdue' | string;
+  pendingAmount: number;
+  totalPaid: number;
+  daysUntilNextPayment: number | null;
+  nextPaymentDate: string | null;
 }
 
 /**

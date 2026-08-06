@@ -2,6 +2,8 @@ import * as Haptics from 'expo-haptics';
 import { useCallback } from 'react';
 import { Platform } from 'react-native';
 
+import { isHapticsEnabledNow } from '@/lib/preferences-store';
+
 /**
  * What a haptic is *for*, rather than which API to call.
  *
@@ -82,8 +84,14 @@ function perform(intent: HapticIntent): Promise<void> {
  * Call this on the JS thread. The expo module is bound to the JS runtime, so
  * invoking it from a Reanimated worklet running on the UI thread will throw —
  * reach for `runOnJS` at those call sites.
+ *
+ * Also respects the app-wide "Vibration" preference (Settings) — checked
+ * here rather than at each call site, so every existing `haptic={true}`
+ * default (e.g. on `Button`) honors it automatically.
  */
 export function triggerHaptic(intent: HapticIntent = 'impact-light'): void {
+  if (!isHapticsEnabledNow()) return;
+
   try {
     perform(intent).catch(() => {});
   } catch {

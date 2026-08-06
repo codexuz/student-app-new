@@ -1,173 +1,184 @@
-const lightColors = {
-  // Base colors
-  background: '#FFFFFF',
-  foreground: '#000000',
+// Brand blue — matches the notification tint, adaptive icon background, and
+// splash screen already configured in app.json, so the in-app primary color
+// doesn't drift from what the OS shows before the app has even loaded.
+const BRAND_BLUE = '#1055F8';
 
-  // Card colors
-  card: '#F2F2F7',
-  cardForeground: '#000000',
+const lightColors = {
+  // Base colors — a near-black navy rather than pure #000 reads calmer and
+  // more "designed" for long reading/study sessions than stark black-on-white.
+  background: '#FFFFFF',
+  foreground: '#0B1220',
+
+  // Card colors — a faint cool tint instead of a flat gray gives cards a
+  // touch of depth against a pure white background.
+  card: '#F4F6FB',
+  cardForeground: '#0B1220',
 
   // Popover colors
-  popover: '#F2F2F7',
-  popoverForeground: '#000000',
+  popover: '#F4F6FB',
+  popoverForeground: '#0B1220',
 
   // Primary colors
-  primary: '#405FF2',
+  primary: BRAND_BLUE,
   primaryForeground: '#FFFFFF',
 
-  // Secondary colors
-  secondary: '#F2F2F7',
-  secondaryForeground: '#18181b',
+  // Secondary colors — distinct from `card`/`accent` so grouped UI (e.g.
+  // secondary buttons) doesn't visually collapse into the same surface.
+  secondary: '#EEF1F8',
+  secondaryForeground: '#1E293B',
 
   // Muted colors
-  muted: '#78788033',
-  mutedForeground: '#71717a',
+  muted: '#64748B33',
+  mutedForeground: '#64748B',
 
-  // Accent colors
-  accent: '#F2F2F7',
-  accentForeground: '#18181b',
+  // Accent colors — a light wash of the brand blue, for selected/hover states.
+  accent: '#E8EEFE',
+  accentForeground: BRAND_BLUE,
 
   // Destructive colors
-  destructive: '#ef4444',
+  destructive: '#DC2626',
   destructiveForeground: '#FFFFFF',
 
   // Border and input
-  border: '#C6C6C8',
-  input: '#e4e4e7',
-  ring: '#a1a1aa',
+  border: '#E2E8F0',
+  input: '#E2E8F0',
+  ring: '#94A3B8',
 
   // Text colors
-  text: '#000000',
-  textMuted: '#71717a',
+  text: '#0B1220',
+  textMuted: '#64748B',
 
   // Legacy support for existing components
-  tint: '#18181b',
-  icon: '#71717a',
-  tabIconDefault: '#71717a',
-  tabIconSelected: '#18181b',
+  tint: BRAND_BLUE,
+  icon: '#64748B',
+  tabIconDefault: '#64748B',
+  tabIconSelected: BRAND_BLUE,
 
   // Default buttons, links, Send button, selected tabs
-  blue: '#007AFF',
+  blue: BRAND_BLUE,
 
-  // Success states, FaceTime buttons, completed tasks
-  green: '#34C759',
+  // Success states, correct answers, completed lessons
+  green: '#16A34A',
 
-  // Delete buttons, error states, critical alerts
-  red: '#FF3B30',
+  // Delete buttons, error states, critical alerts, overdue payments
+  red: '#DC2626',
 
-  // VoiceOver highlights, warning states
-  orange: '#FF9500',
+  // Warning states, streak/reward highlights
+  orange: '#D97706',
 
-  // Notes app accent, Reminders highlights
-  yellow: '#FFCC00',
+  // Coins, badges, achievement highlights
+  yellow: '#CA8A04',
 
-  // Pink accent color for various UI elements
-  pink: '#FF2D92',
+  // Decorative accent for badges and rewards
+  pink: '#DB2777',
 
-  // Purple accent for creative apps and features
-  purple: '#AF52DE',
+  // Decorative accent for creative features
+  purple: '#7C3AED',
 
-  // Teal accent for communication features
-  teal: '#5AC8FA',
+  // Decorative accent for communication features
+  teal: '#0D9488',
 
-  // Indigo accent for system features
-  indigo: '#5856D6',
+  // Decorative accent for system/info features
+  indigo: '#4F46E5',
 
-  // Semantic states
-  success: '#22c55e',
-  successForeground: '#ffffff',
-  warning: '#f59e0b',
-  warningForeground: '#ffffff',
-  info: '#3b82f6',
-  infoForeground: '#ffffff',
-  error: '#ef4444',
-  errorForeground: '#ffffff',
+  // Semantic states — reuse the same hues as their raw counterparts above so
+  // "success" and "green" (etc.) never silently drift apart.
+  success: '#16A34A',
+  successForeground: '#FFFFFF',
+  warning: '#D97706',
+  warningForeground: '#FFFFFF',
+  info: '#2563EB',
+  infoForeground: '#FFFFFF',
+  error: '#DC2626',
+  errorForeground: '#FFFFFF',
 };
 
 const darkColors = {
-  // Base colors
-  background: '#000000',
-  foreground: '#FFFFFF',
+  // Base colors — dark navy rather than true black; easier on the eyes and
+  // still lets the brand blue read clearly against it.
+  background: '#0A0F1A',
+  foreground: '#F1F5F9',
 
   // Card colors
-  card: '#1C1C1E',
-  cardForeground: '#FFFFFF',
+  card: '#131B2C',
+  cardForeground: '#F1F5F9',
 
   // Popover colors
-  popover: '#18181b',
-  popoverForeground: '#FFFFFF',
+  popover: '#131B2C',
+  popoverForeground: '#F1F5F9',
 
-  // Primary colors
-  primary: '#e4e4e7',
-  primaryForeground: '#18181b',
+  // Primary colors — a brighter tint of the brand blue; the light mode's
+  // saturated `#1055F8` loses contrast against a dark background.
+  primary: '#5B8DFF',
+  primaryForeground: '#FFFFFF',
 
   // Secondary colors
-  secondary: '#1C1C1E',
-  secondaryForeground: '#FFFFFF',
+  secondary: '#1B2436',
+  secondaryForeground: '#F1F5F9',
 
   // Muted colors
-  muted: '#78788033',
-  mutedForeground: '#a1a1aa',
+  muted: '#64748B33',
+  mutedForeground: '#94A3B8',
 
   // Accent colors
-  accent: '#1C1C1E',
-  accentForeground: '#FFFFFF',
+  accent: '#1B2C4D',
+  accentForeground: '#5B8DFF',
 
   // Destructive colors
-  destructive: '#dc2626',
+  destructive: '#EF4444',
   destructiveForeground: '#FFFFFF',
 
-  // Border and input - using alpha values for better blending
-  border: '#38383A',
-  input: 'rgba(255, 255, 255, 0.15)',
-  ring: '#71717a',
+  // Border and input — using alpha values for better blending
+  border: '#24304A',
+  input: 'rgba(255, 255, 255, 0.08)',
+  ring: '#475569',
 
   // Text colors
-  text: '#FFFFFF',
-  textMuted: '#a1a1aa',
+  text: '#F1F5F9',
+  textMuted: '#94A3B8',
 
   // Legacy support for existing components
-  tint: '#FFFFFF',
-  icon: '#a1a1aa',
-  tabIconDefault: '#a1a1aa',
-  tabIconSelected: '#FFFFFF',
+  tint: '#5B8DFF',
+  icon: '#94A3B8',
+  tabIconDefault: '#94A3B8',
+  tabIconSelected: '#F1F5F9',
 
   // Default buttons, links, Send button, selected tabs
-  blue: '#0A84FF',
+  blue: '#5B8DFF',
 
-  // Success states, FaceTime buttons, completed tasks
-  green: '#30D158',
+  // Success states, correct answers, completed lessons
+  green: '#22C55E',
 
-  // Delete buttons, error states, critical alerts
-  red: '#FF453A',
+  // Delete buttons, error states, critical alerts, overdue payments
+  red: '#EF4444',
 
-  // VoiceOver highlights, warning states
-  orange: '#FF9F0A',
+  // Warning states, streak/reward highlights
+  orange: '#F59E0B',
 
-  // Notes app accent, Reminders highlights
-  yellow: '#FFD60A',
+  // Coins, badges, achievement highlights
+  yellow: '#EAB308',
 
-  // Pink accent color for various UI elements
-  pink: '#FF375F',
+  // Decorative accent for badges and rewards
+  pink: '#EC4899',
 
-  // Purple accent for creative apps and features
-  purple: '#BF5AF2',
+  // Decorative accent for creative features
+  purple: '#8B5CF6',
 
-  // Teal accent for communication features
-  teal: '#64D2FF',
+  // Decorative accent for communication features
+  teal: '#14B8A6',
 
-  // Indigo accent for system features
-  indigo: '#5E5CE6',
+  // Decorative accent for system/info features
+  indigo: '#6366F1',
 
   // Semantic states
-  success: '#16a34a',
-  successForeground: '#ffffff',
-  warning: '#d97706',
-  warningForeground: '#ffffff',
-  info: '#2563eb',
-  infoForeground: '#ffffff',
-  error: '#dc2626',
-  errorForeground: '#ffffff',
+  success: '#22C55E',
+  successForeground: '#FFFFFF',
+  warning: '#F59E0B',
+  warningForeground: '#FFFFFF',
+  info: '#3B82F6',
+  infoForeground: '#FFFFFF',
+  error: '#EF4444',
+  errorForeground: '#FFFFFF',
 };
 
 export const Colors = {

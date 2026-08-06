@@ -2,52 +2,102 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
+  Linking,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { BookOpen, Camera, CreditCard, GraduationCap, LogOut, Trophy } from 'lucide-react-native';
+import type { LucideProps } from 'lucide-react-native';
+import {
+  AlertCircle,
+  Award,
+  Camera,
+  Check,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  HelpCircle,
+  LogOut,
+  Mic,
+  Moon,
+  Share2,
+  Star,
+  User,
+  Vibrate,
+  Volume2,
+  ArrowUpRight
+} from 'lucide-react-native';
 
+import { BottomSheet, useBottomSheet } from '@/components/ui/bottom-sheet';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { GroupedInput } from '@/components/ui/input';
 import { Icon } from '@/components/ui/icon';
-import { ModeToggle } from '@/components/ui/mode-toggle';
 import { ScrollView } from '@/components/ui/scroll-view';
+import { Switch } from '@/components/ui/switch';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useModeToggle } from '@/hooks/useModeToggle';
 import { ApiError } from '@/lib/api/client';
-import { getMyCourses, type Enrollment } from '@/lib/api/courses';
 import { getPaymentStatus, type PaymentStatus } from '@/lib/api/payments';
 import { uploadAvatar, type UploadableImage } from '@/lib/api/users';
 import { useAuth } from '@/providers/auth-provider';
+import { usePreferences } from '@/providers/preferences-provider';
 import { SPACING } from '@/theme/globals';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const GRID_GAP = 12;
-const CARD_WIDTH = (SCREEN_WIDTH - SPACING.lg * 2 - GRID_GAP) / 2;
+const APP_STORE_URL = 'https://apps.apple.com/app/6757120304';
+const PLAY_STORE_PACKAGE = 'edu.impulse.uz';
+const HELP_CENTER_URL = 'https://t.me/javlon_developer';
+
+function MenuRow({
+  icon,
+  label,
+  onPress,
+  right,
+}: {
+  icon: React.ComponentType<LucideProps>;
+  label: string;
+  onPress?: () => void;
+  right?: React.ReactNode;
+}) {
+  const muted = useColor('textMuted');
+  const border = useColor('border');
+
+  return (
+    <Pressable onPress={onPress} disabled={!onPress} style={styles.menuRow}>
+      <View style={styles.menuRowLeft}>
+        <Icon name={icon} size={20} color={muted} />
+        <Text variant='body'>{label}</Text>
+      </View>
+      {right ?? (onPress && <Icon name={ChevronRight} size={18} color={border} />)}
+    </Pressable>
+  );
+}
 
 export default function ProfileScreen() {
   const { user, signOut, updateUser } = useAuth();
-  const isDark = useColorScheme() === 'dark';
+  const { isSoundEnabled, isHapticsEnabled, setSoundEnabled, setHapticsEnabled } =
+    usePreferences();
+  const { mode, isDark, setMode } = useModeToggle();
   const primary = useColor('primary');
   const muted = useColor('textMuted');
-  const text = useColor('text');
   const red = useColor('red');
   const green = useColor('green');
+  const orange = useColor('orange');
   const background = useColor('background');
-  const cardColor = useColor('card');
-  const neutralBadge = isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F5';
-
+  const text = useColor('text');
   const [isUploading, setIsUploading] = useState(false);
-  const [courses, setCourses] = useState<Enrollment[]>([]);
-  const [isLoadingCourses, setIsLoadingCourses] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
-  const [isLoadingPayment, setIsLoadingPayment] = useState(true);
+  // Profile only ever mounts once `user` is resolved, so this reflects
+  // whether there's anything to fetch right from the first render — no need
+  // to flip it synchronously inside the effect below for the "no id" case.
+  const [isLoadingPayment, setIsLoadingPayment] = useState(() => !!user?.user_id);
+  const signOutSheet = useBottomSheet();
 
   const displayName = user?.first_name || user?.username || 'User';
   const fullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || displayName;
@@ -56,31 +106,15 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     const userId = user?.user_id;
-    if (!userId) {
-      // Nothing to fetch without an id, but the spinners must still resolve
-      // rather than spin forever.
-      setIsLoadingCourses(false);
-      setIsLoadingPayment(false);
-      return;
-    }
+    if (!userId) return;
 
     let isMounted = true;
-
-    getMyCourses()
-      .then((data) => {
-        if (isMounted) setCourses(data);
-      })
-      .catch(() => {
-        if (isMounted) setCourses([]);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoadingCourses(false);
-      });
 
     // A 404 (no billing set up yet) or 403 (staff accounts have no student
     // payment record) are both just "nothing to show" — the card hides either way.
     getPaymentStatus(userId)
       .then((status) => {
+        console.log(status)
         if (isMounted) setPaymentStatus(status);
       })
       .catch(() => {
@@ -169,18 +203,79 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          await signOut();
-          router.replace('/sign-in');
+  const confirmSignOut = async () => {
+    signOutSheet.close();
+    await signOut();
+    router.replace('/sign-in');
+  };
+
+  const handleRateApp = async () => {
+    try {
+      const url = Platform.select({
+        ios: APP_STORE_URL,
+        android: `market://details?id=${PLAY_STORE_PACKAGE}`,
+      });
+      if (!url) return;
+
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'Unable to open app store');
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to open app store');
+    }
+  };
+
+  const handleShareApp = async () => {
+    try {
+      const appUrl = Platform.select({
+        ios: APP_STORE_URL,
+        android: `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`,
+        web: typeof window !== 'undefined' ? window.location.origin : undefined,
+      });
+
+      if (Platform.OS === 'web') {
+        const shareText = `Check out this amazing language learning app! Download it now and start your learning journey.\n\n${appUrl}`;
+
+        if (typeof navigator !== 'undefined' && navigator.share) {
+          try {
+            await navigator.share({ title: 'Learn with Impulse', text: shareText });
+          } catch (error) {
+            if (error instanceof Error && error.name !== 'AbortError') {
+              await navigator.clipboard.writeText(shareText);
+              window.alert('Link copied to clipboard!');
+            }
+          }
+        } else if (typeof navigator !== 'undefined') {
+          await navigator.clipboard.writeText(shareText);
+          window.alert('Link copied to clipboard!');
+        }
+        return;
+      }
+
+      const shareContent = Platform.select({
+        ios: {
+          message:
+            'Check out this amazing language learning app! Download it now and start your learning journey.',
+          url: appUrl,
         },
-      },
-    ]);
+        android: {
+          message: `Check out this amazing language learning app! Download it now and start your learning journey.\n\n${appUrl}`,
+          title: 'Share App',
+        },
+      });
+
+      const shareOptions = Platform.select({
+        ios: { subject: 'Learn with Impulse' },
+        android: { dialogTitle: 'Share App with Friends' },
+      });
+
+      if (shareContent) await Share.share(shareContent, shareOptions);
+    } catch {
+      Alert.alert('Error', 'Failed to share app');
+    }
   };
 
   const renderPaymentCard = () => {
@@ -197,176 +292,184 @@ export default function ProfileScreen() {
 
     if (!paymentStatus) return null;
 
-    const isOverdue = paymentStatus.paymentStatus === 'overdue';
-    const isUpcoming = !isOverdue && (paymentStatus.daysUntilNextPayment ?? Infinity) < 4;
-    // Border reflects overall status (red only turns up when something's
-    // actually wrong); the amount text only recolors for that same worst case
-    // — "upcoming" still reads in the normal text color, just with different wording.
-    const borderAccent = isOverdue ? red : green;
-    const amountColor = isOverdue ? red : text;
-    const label = isOverdue
-      ? `-${paymentStatus.pendingAmount ?? 0} UZS`
-      : isUpcoming
-        ? 'Payment Upcoming'
-        : 'Active & Paid';
+    const nextPaymentLabel = paymentStatus.nextPaymentDate
+      ? new Date(paymentStatus.nextPaymentDate).toLocaleDateString('en-US', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : null;
+
+    const { icon, color, label, amount, subtitle } = (() => {
+      switch (paymentStatus.paymentStatus) {
+        case 'completed':
+          return {
+            icon: Check,
+            color: green,
+            label: 'Completed',
+            amount: paymentStatus.totalPaid,
+            subtitle: 'Fully paid',
+          };
+        case 'pending':
+          return {
+            icon: AlertCircle,
+            color: orange,
+            label: 'Pending',
+            amount: paymentStatus.pendingAmount,
+            subtitle: nextPaymentLabel ? `Due ${nextPaymentLabel}` : 'Payment due soon',
+          };
+        case 'overdue':
+          return {
+            icon: Clock,
+            color: red,
+            label: 'Overdue',
+            amount: paymentStatus.pendingAmount,
+            subtitle: nextPaymentLabel ? `Was due ${nextPaymentLabel}` : 'Payment overdue',
+          };
+        default:
+          return {
+            icon: CreditCard,
+            color: primary,
+            label: paymentStatus.paymentStatus,
+            amount: paymentStatus.pendingAmount || paymentStatus.totalPaid,
+            subtitle: 'Subscription',
+          };
+      }
+    })();
 
     return (
-      <Card style={{ ...styles.paymentCard, borderLeftColor: borderAccent, borderLeftWidth: 4 }}>
+      <Card style={styles.paymentCard}>
         <View style={styles.paymentRow}>
-          <View style={[styles.paymentIcon, { backgroundColor: neutralBadge }]}>
-            <Icon name={CreditCard} size={18} color={primary} />
+          <View style={[styles.paymentIconBadge]}>
+            <Icon name={icon} size={23} color={color} />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text variant='caption' style={styles.paymentLabel}>
-              Subscription
+          <View style={styles.paymentTextBlock}>
+            <Text variant='body' style={styles.paymentTitle} numberOfLines={1}>
+              {amount.toLocaleString()} UZS
             </Text>
-            <Text variant='body' style={{ color: amountColor, fontWeight: '700' }}>
-              {label}
-            </Text>
+            <Text variant='caption' style={styles.paymentStatusLabel}>
+            {label}
+          </Text>
           </View>
+          <Icon name={ArrowUpRight} size={22} color={text} />
         </View>
       </Card>
     );
   };
 
-  const renderCourses = () => {
-    if (isLoadingCourses) {
-      return (
-        <View style={styles.coursesPlaceholder}>
-          <ActivityIndicator size='small' color={primary} />
-        </View>
-      );
-    }
-
-    if (courses.length === 0) {
-      return (
-        <Card style={styles.emptyCourses}>
-          <Icon name={GraduationCap} size={28} color={muted} />
-          <Text variant='caption' style={{ textAlign: 'center' }}>
-            You are not enrolled in any course yet
-          </Text>
-        </Card>
-      );
-    }
-
-    return (
-      <View style={styles.coursesGrid}>
-        {courses.map((course, index) => {
-          const percentage = Math.max(0, Math.min(100, Math.round(course.percentage || 0)));
-          const isFinished = course.is_completed || percentage >= 100;
-          const fillPercentage = isFinished ? 100 : percentage;
-          const accent = isFinished ? green : primary;
-
-          return (
-            <Card
-              key={`${course.course_id}-${index}`}
-              style={{ ...styles.courseCard, width: CARD_WIDTH }}
-            >
-              <View style={styles.courseTopRow}>
-                <View style={[styles.courseIconBadge, { backgroundColor: `${accent}1A` }]}>
-                  <Icon name={isFinished ? Trophy : BookOpen} size={16} color={accent} />
-                </View>
-                <Text variant='caption' style={{ color: accent, fontWeight: '700' }}>
-                  {fillPercentage}%
-                </Text>
-              </View>
-
-              <Text variant='body' style={styles.courseName} numberOfLines={2}>
-                {course.course_name}
-              </Text>
-
-              <View style={[styles.courseTrack, { backgroundColor: `${accent}20` }]}>
-                <View
-                  style={[
-                    styles.courseFill,
-                    { width: `${fillPercentage}%`, backgroundColor: accent },
-                  ]}
-                />
-              </View>
-
-              <Text variant='caption' style={styles.courseMeta}>
-                {course.total > 0 ? `${course.completed}/${course.total} lessons` : 'Completed'}
-              </Text>
-            </Card>
-          );
-        })}
-      </View>
-    );
-  };
-
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentInsetAdjustmentBehavior='automatic'
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: Platform.OS === 'ios' ? SPACING.lg : 96 },
-      ]}
-    >
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <Pressable
-            style={[styles.avatar, { backgroundColor: primary }]}
-            onPress={handleChoosePhoto}
-            disabled={isUploading}
-          >
-            {user?.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarLetter}>{avatarLetter}</Text>
-            )}
-            {isUploading && (
-              <View style={[styles.avatarOverlay, { backgroundColor: `${background}CC` }]}>
-                <Icon name={Camera} size={20} color={muted} />
-              </View>
-            )}
-          </Pressable>
-          <Pressable
-            style={[styles.editBadge, { backgroundColor: primary, borderColor: background }]}
-            onPress={handleChoosePhoto}
-            disabled={isUploading}
-          >
-            <Icon name={Camera} size={14} color={background} />
-          </Pressable>
+    <>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentInsetAdjustmentBehavior='automatic'
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: Platform.OS === 'ios' ? SPACING.lg : 24 },
+        ]}
+      >
+        <View style={styles.header}>
+          <View style={styles.avatarContainer}>
+            <Pressable
+              style={[styles.avatar, { backgroundColor: primary }]}
+              onPress={handleChoosePhoto}
+              disabled={isUploading}
+            >
+              {user?.avatar_url ? (
+                <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarLetter}>{avatarLetter}</Text>
+              )}
+              {isUploading && (
+                <View style={[styles.avatarOverlay, { backgroundColor: `${background}CC` }]}>
+                  <Icon name={Camera} size={20} color={muted} />
+                </View>
+              )}
+            </Pressable>
+            <Pressable
+              style={[styles.editBadge, { backgroundColor: primary, borderColor: background }]}
+              onPress={handleChoosePhoto}
+              disabled={isUploading}
+            >
+              <Icon name={Camera} size={14} color={background} />
+            </Pressable>
+          </View>
+
+          <Text variant='title' style={styles.fullName}>
+            {fullName}
+          </Text>
+          {!!secondaryLine && <Text variant='caption'>{secondaryLine}</Text>}
         </View>
 
-        <Text variant='title' style={styles.fullName}>
-          {fullName}
-        </Text>
-        {!!secondaryLine && <Text variant='caption'>{secondaryLine}</Text>}
-      </View>
+        {renderPaymentCard()}
 
-      {renderPaymentCard()}
+        <GroupedInput title='Profile Information' titleStyle={{fontSize: 22}}>
+          <MenuRow icon={Mic} label='My Recordings' onPress={() => router.push('/my-recording')} />
+          <MenuRow icon={User} label='Edit Profile' onPress={() => router.push('/edit-profile')} />
+          <MenuRow icon={Award} label='Certificates' onPress={() => router.push('/certificates')} />
+        </GroupedInput>
 
-      <View style={styles.coursesSection}>
-        <Text variant='subtitle' style={styles.sectionTitle}>
-          My Courses
-        </Text>
-        {renderCourses()}
-      </View>
+        <GroupedInput title='Preferences' titleStyle={{fontSize: 22}}>
+          <MenuRow
+            icon={Volume2}
+            label='Sounds'
+            right={<Switch value={isSoundEnabled} onValueChange={setSoundEnabled} />}
+          />
+          <MenuRow
+            icon={Vibrate}
+            label='Vibration'
+            right={<Switch value={isHapticsEnabled} onValueChange={setHapticsEnabled} />}
+          />
+          <MenuRow
+            icon={Moon}
+            label='Dark Mode'
+            right={
+              <Switch
+                value={mode === 'dark' || (mode === 'system' && isDark)}
+                onValueChange={(value) => setMode(value ? 'dark' : 'light')}
+              />
+            }
+          />
+        </GroupedInput>
 
-      <View style={styles.section}>
-        <Card style={styles.rowCard}>
-          <View style={styles.row}>
-            <Text variant='body'>Appearance</Text>
-            <ModeToggle />
+        <GroupedInput title='Help and Support' titleStyle={{fontSize: 22}}>
+          <MenuRow icon={HelpCircle} label='Help Center' onPress={() => Linking.openURL(HELP_CENTER_URL)} />
+          <MenuRow icon={Star} label='Rate Our App' onPress={handleRateApp} />
+          <MenuRow icon={Share2} label='Share App' onPress={handleShareApp} />
+        </GroupedInput>
+
+        <Button
+          variant='destructive'
+          size='lg'
+          icon={LogOut}
+          onPress={signOutSheet.open}
+          style={styles.signOutButton}
+        >
+          Sign Out
+        </Button>
+      </ScrollView>
+
+      <BottomSheet isVisible={signOutSheet.isVisible} onClose={signOutSheet.close} snapPoints={[0.45]}>
+        <View style={{ gap: SPACING.lg, paddingBottom: SPACING.md }}>
+          <View style={{ alignItems: 'center', gap: SPACING.sm }}>
+            <Icon name={LogOut} size={48} color={red} />
+            <Text variant='title' style={{ textAlign: 'center' }}>
+              Sign Out
+            </Text>
+            <Text variant='caption' style={{ textAlign: 'center' }}>
+              Are you sure you want to sign out of your account?
+            </Text>
           </View>
-        </Card>
-
-        <Pressable onPress={handleSignOut}>
-          <Card style={{ ...styles.rowCard, backgroundColor: cardColor }}>
-            <View style={styles.row}>
-              <View style={styles.rowLeft}>
-                <Icon name={LogOut} size={18} color={red} />
-                <Text variant='body' style={{ color: red }}>
-                  Sign Out
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </Pressable>
-      </View>
-    </ScrollView>
+          <View style={{ gap: SPACING.sm }}>
+            <Button variant='destructive' size='lg' onPress={confirmSignOut} style={{ width: '100%' }}>
+              Sign Out
+            </Button>
+            <Button variant='secondary' size='lg' onPress={signOutSheet.close} style={{ width: '100%' }}>
+              Cancel
+            </Button>
+          </View>
+        </View>
+      </BottomSheet>
+    </>
   );
 }
 
@@ -422,6 +525,7 @@ const styles = StyleSheet.create({
   },
   paymentCard: {
     paddingVertical: SPACING.sm,
+    borderRadius: 16,
     elevation: 0.4
   },
   paymentLoading: {
@@ -435,86 +539,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.sm,
   },
-  paymentLabel: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  paymentIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  paymentIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  coursesSection: {
-    gap: SPACING.sm,
+  paymentTextBlock: {
+    flex: 1,
+    gap: 2,
   },
-  sectionTitle: {
-    marginBottom: 0,
+  paymentTitle: {
+    fontWeight: '700',
+    fontSize: 18
   },
-  coursesPlaceholder: {
-    paddingVertical: SPACING.xl,
-    alignItems: 'center',
+  paymentStatusLabel: {
+    fontWeight: '500',
+    fontSize: 12
   },
-  emptyCourses: {
-    alignItems: 'center',
-    gap: SPACING.sm,
-    paddingVertical: SPACING.lg,
-  },
-  coursesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: GRID_GAP,
-  },
-  courseCard: {
-    padding: 14,
-    elevation: 0.4
-  },
-  courseTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.sm,
-  },
-  courseIconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  courseName: {
-    minHeight: 38,
-    marginBottom: SPACING.sm,
-  },
-  courseTrack: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  courseFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  courseMeta: {
-    marginTop: SPACING.xs,
-  },
-  section: {
-    gap: SPACING.sm,
-  },
-  rowCard: {
-    paddingVertical: SPACING.sm,
-  },
-  row: {
+  menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  rowLeft: {
+  menuRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
+  },
+  signOutButton: {
+    width: '100%',
   },
 });
