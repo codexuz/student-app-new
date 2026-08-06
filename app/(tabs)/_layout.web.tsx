@@ -2,7 +2,7 @@ import React from 'react';
 import { Icon } from '@/components/ui/icon';
 import { useColor } from '@/hooks/useColor';
 import { Tabs } from 'expo-router';
-import { Home, Search, Settings } from 'lucide-react-native';
+import { GraduationCap, Home, ShoppingBag, TrendingUp, User } from 'lucide-react-native';
 
 export default function WebTabsLayout() {
   const primary = useColor('primary');
@@ -25,21 +25,41 @@ export default function WebTabsLayout() {
       />
 
       <Tabs.Screen
-        name='settings'
+        name='grades'
         options={{
-          title: 'Settings',
+          title: 'Grades',
           tabBarIcon: ({ color }) => (
-            <Icon name={Settings} size={24} color={color} />
+            <Icon name={GraduationCap} size={24} color={color} />
           ),
         }}
       />
 
       <Tabs.Screen
-        name='search'
+        name='shop'
         options={{
-          title: 'Search',
+          title: 'Shop',
           tabBarIcon: ({ color }) => (
-            <Icon name={Search} size={24} color={color} />
+            <Icon name={ShoppingBag} size={24} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name='progress'
+        options={{
+          title: 'Progress',
+          tabBarIcon: ({ color }) => (
+            <Icon name={TrendingUp} size={24} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name='profile'
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <Icon name={User} size={24} color={color} />
           ),
         }}
       />

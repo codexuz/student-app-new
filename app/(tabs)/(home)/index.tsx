@@ -1,7 +1,5 @@
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
-import { Link } from '@/components/ui/link';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
@@ -87,10 +85,6 @@ export default function HomeScreen() {
           </Text>
         </Card>
       </View>
-
-      <Link asChild href='/sheet'>
-        <Button>Open Components Sheet</Button>
-      </Link>
     </View>
   );
 }

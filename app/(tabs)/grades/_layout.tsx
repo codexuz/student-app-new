@@ -1,16 +1,13 @@
-import { Text } from '@/components/ui/text';
-import { useColor } from '@/hooks/useColor';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { SearchProvider, useSearch } from '@/providers/search-context';
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Stack } from 'expo-router';
-import { Platform } from 'react-native';
+import { useColor } from '@/hooks/useColor';
+import { Platform, useColorScheme } from 'react-native';
+import { Text } from '@/components/ui/text';
+import { isLiquidGlassAvailable } from 'expo-glass-effect';
 
-function SearchLayoutContent() {
+export default function GradesLayout() {
   const theme = useColorScheme();
   const text = useColor('text');
   const background = useColor('background');
-  const { setSearchText } = useSearch();
 
   return (
     <Stack
@@ -33,28 +30,13 @@ function SearchLayoutContent() {
       <Stack.Screen
         name='index'
         options={{
-          title: 'Search',
+          title: 'Grades',
           headerTitle: () =>
             Platform.OS === 'android' ? (
-              <Text variant='heading'>Search</Text>
+              <Text variant='heading'>Grades</Text>
             ) : undefined,
-          headerSearchBarOptions: {
-            placement: 'automatic',
-            placeholder: 'Search',
-            onChangeText: (event) => {
-              setSearchText(event.nativeEvent.text);
-            },
-          },
         }}
       />
     </Stack>
-  );
-}
-
-export default function SearchLayout() {
-  return (
-    <SearchProvider>
-      <SearchLayoutContent />
-    </SearchProvider>
   );
 }

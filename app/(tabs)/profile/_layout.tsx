@@ -4,7 +4,7 @@ import { Platform, useColorScheme } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 
-export default function SettingsLayout() {
+export default function ProfileLayout() {
   const theme = useColorScheme();
   const text = useColor('text');
   const background = useColor('background');
@@ -30,10 +30,10 @@ export default function SettingsLayout() {
       <Stack.Screen
         name='index'
         options={{
-          title: 'Settings',
+          title: 'Profile',
           headerTitle: () =>
             Platform.OS === 'android' ? (
-              <Text variant='heading'>Settings</Text>
+              <Text variant='heading'>Profile</Text>
             ) : undefined,
         }}
       />
