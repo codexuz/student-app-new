@@ -113,6 +113,7 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={isAuthenticated && !shouldPromptForNotifications}>
           <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+          <Stack.Screen name='(ai-chat)' options={{ headerShown: false }} />
           <Stack.Screen name='my-recording' options={{ headerShown: true, title: 'My Recordings' }} />
           <Stack.Screen name='edit-profile' options={{ headerShown: true, title: 'Edit Profile' }} />
           <Stack.Screen name='certificates' options={{ headerShown: true, title: 'Certificates' }} />

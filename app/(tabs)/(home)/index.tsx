@@ -1,90 +1,63 @@
+import { Pressable, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import { ChevronRight, Sparkles } from 'lucide-react-native';
+
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
-import { Terminal } from 'lucide-react-native';
+import { SPACING } from '@/theme/globals';
 
 export default function HomeScreen() {
-  const green = useColor('green');
-  const muted = useColor('muted');
+  const primary = useColor('primary');
+  const accent = useColor('accent');
+  const muted = useColor('textMuted');
 
   return (
-    <View
-      style={{
-        flex: 1,
-        gap: 16,
-        padding: 24,
-        justifyContent: 'center',
-      }}
-    >
-      <Text
-        variant='heading'
-        style={{
-          textAlign: 'center',
-        }}
-      >
-        Built with ❤️ by BNA
-      </Text>
+    <View style={styles.container}>
+      <Text variant='heading'>Welcome back</Text>
 
-      <View
-        style={{
-          marginBottom: 20,
-        }}
-      >
+      <Pressable onPress={() => router.push('/(ai-chat)')}>
         <Card>
-          <View
-            style={{
-              gap: 8,
-              marginBottom: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-          >
-            <Icon name={Terminal} />
+          <View style={styles.cardRow}>
+            <View style={[styles.iconBadge, { backgroundColor: accent }]}>
+              <Icon name={Sparkles} size={22} color={primary} />
+            </View>
 
-            <Text
-              variant='body'
-              style={{
-                fontWeight: '600',
-              }}
-            >
-              Add Components
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text variant='body' style={{ fontWeight: '600' }}>
+                AI Chat
+              </Text>
+              <Text variant='caption' style={{ marginTop: 2 }}>
+                Ask your AI tutor about grammar, vocabulary, or IELTS prep
+              </Text>
+            </View>
+
+            <Icon name={ChevronRight} size={20} color={muted} />
           </View>
-          <View
-            style={{
-              backgroundColor: muted,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              borderRadius: 8,
-              marginBottom: 16,
-              minWidth: '100%',
-            }}
-          >
-            <Text
-              variant='caption'
-              style={{
-                color: green,
-                fontFamily: 'monospace',
-                fontSize: 16,
-                textAlign: 'center',
-              }}
-            >
-              npx bna-ui add avatar
-            </Text>
-          </View>
-          <Text
-            variant='caption'
-            style={{
-              textAlign: 'center',
-              opacity: 0.7,
-            }}
-          >
-            Add components with a single command
-          </Text>
         </Card>
-      </View>
+      </Pressable>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    gap: SPACING.md,
+    padding: SPACING.lg,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  iconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

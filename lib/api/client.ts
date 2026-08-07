@@ -7,6 +7,8 @@ import type { RefreshResponse } from '@/lib/api/types';
 
 const BASE_URL = 'https://backend.impulselc.uz/api';
 
+export { BASE_URL };
+
 /** Refresh proactively once the access token has under this long left. */
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 
@@ -54,7 +56,7 @@ async function parseJsonSafely(response: Response): Promise<unknown> {
 // only the first does, and the rest await its result.
 let refreshInFlight: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
 
   refreshInFlight = performRefresh().finally(() => {
@@ -103,7 +105,7 @@ async function performRefresh(): Promise<string | null> {
   }
 }
 
-async function resolveAccessToken(): Promise<string | null> {
+export async function resolveAccessToken(): Promise<string | null> {
   const current = getSessionSnapshot();
   if (!current || current === 'pending') return null;
 

@@ -1,3 +1,4 @@
+export * from '@/lib/api/ai-chat';
 export * from '@/lib/api/auth';
 export * from '@/lib/api/certificates';
 export { apiRequest, apiUpload, ApiError } from '@/lib/api/client';
