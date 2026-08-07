@@ -1,12 +1,16 @@
 import type { DrawerContentComponentProps } from 'expo-router/drawer';
-import { useThreadListItemTrigger, useThreadListNew } from '@assistant-ui/core/react';
+import {
+  useThreadListItemDelete,
+  useThreadListItemTrigger,
+  useThreadListNew,
+} from '@assistant-ui/core/react';
 import type { ThreadListItemState } from '@assistant-ui/core/store';
 import { ThreadListItemPrimitive } from '@assistant-ui/react-native';
 import { AuiProvider, Derived, useAui, useAuiState } from '@assistant-ui/store';
 import { isToday, isYesterday } from 'date-fns';
 import { MessageSquarePlus, PencilLine, Trash2 } from 'lucide-react-native';
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, SectionList, StyleSheet } from 'react-native';
+import { Alert, Pressable, SectionList, StyleSheet } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
@@ -118,6 +122,14 @@ function ThreadRowContent({
   hover: string;
 }) {
   const { switchTo } = useThreadListItemTrigger();
+  const { delete: deleteThread } = useThreadListItemDelete();
+
+  const confirmDelete = () => {
+    Alert.alert('Delete chat?', 'This conversation will be permanently deleted.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: deleteThread },
+    ]);
+  };
 
   return (
     <Pressable
@@ -136,9 +148,9 @@ function ThreadRowContent({
         <ThreadListItemPrimitive.Title fallback='New chat' />
       </Text>
 
-      <ThreadListItemPrimitive.Delete style={styles.rowAction} hitSlop={8}>
+      <Pressable onPress={confirmDelete} style={styles.rowAction} hitSlop={8}>
         <Icon name={Trash2} size={16} color={destructive ?? muted} />
-      </ThreadListItemPrimitive.Delete>
+      </Pressable>
     </Pressable>
   );
 }

@@ -71,12 +71,19 @@ export function createChatThreadsAdapter(): RemoteThreadListAdapter {
       return { status: 'regular', remoteId };
     },
 
-    async generateTitle() {
-      // The backend auto-titles a thread from the first user message
-      // (see ai-chat-bot.service.ts#createStream), so there's nothing to
-      // generate here — return an already-finished, empty stream.
+    async generateTitle(remoteId) {
+      // The backend auto-titles a thread from the first user message (see
+      // ai-chat-bot.service.ts#createStream) as part of handling that
+      // message — by the time this runs (after the assistant's first
+      // response finishes, see RemoteThreadListHookInstanceManager's
+      // `runEnd` handler), the title already exists on the backend. Fetch
+      // and stream it back so the sidebar picks it up immediately instead
+      // of waiting for the next unrelated `list()` refetch.
+      const threads = await listAllThreads();
+      const title = threads.find((t) => t.id === remoteId)?.title;
+
       return createAssistantStream(async (controller) => {
-        controller.close();
+        if (title) controller.appendText(title);
       });
     },
   };
