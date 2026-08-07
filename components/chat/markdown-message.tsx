@@ -64,11 +64,29 @@ export function MarkdownMessage({ content, textColor }: { content: string; textC
     <Markdown
       rules={rules}
       style={{
-        body: { color: resolvedTextColor, fontSize: FONT_SIZE },
+        body: { color: resolvedTextColor, fontSize: FONT_SIZE, lineHeight: FONT_SIZE * 1.6 },
         paragraph: { marginTop: 0, marginBottom: SPACING.xs },
-        heading1: { color: resolvedTextColor, fontSize: 22, fontWeight: '700', marginBottom: SPACING.xs },
-        heading2: { color: resolvedTextColor, fontSize: 19, fontWeight: '700', marginBottom: SPACING.xs },
-        heading3: { color: resolvedTextColor, fontSize: 17, fontWeight: '600', marginBottom: SPACING.xs },
+        heading1: {
+          color: resolvedTextColor,
+          fontSize: 22,
+          lineHeight: 22 * 1.3,
+          fontWeight: '700',
+          marginBottom: SPACING.xs,
+        },
+        heading2: {
+          color: resolvedTextColor,
+          fontSize: 19,
+          lineHeight: 19 * 1.3,
+          fontWeight: '700',
+          marginBottom: SPACING.xs,
+        },
+        heading3: {
+          color: resolvedTextColor,
+          fontSize: 17,
+          lineHeight: 17 * 1.3,
+          fontWeight: '600',
+          marginBottom: SPACING.xs,
+        },
         strong: { fontWeight: '700' },
         em: { fontStyle: 'italic' },
         link: { color: primary, textDecorationLine: 'underline' },
