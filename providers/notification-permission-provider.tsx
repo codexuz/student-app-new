@@ -15,7 +15,7 @@ import {
 } from '@/lib/notification-permission-store';
 import {
   registerForPushNotifications,
-  requestNotificationPermission,
+  requestPermission as requestNotificationPermission,
 } from '@/lib/notifications';
 import { useAuth } from '@/providers/auth-provider';
 

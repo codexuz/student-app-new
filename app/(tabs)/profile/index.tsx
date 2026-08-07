@@ -15,6 +15,7 @@ import type { LucideProps } from 'lucide-react-native';
 import {
   AlertCircle,
   Award,
+  Bell,
   Camera,
   Check,
   ChevronRight,
@@ -47,6 +48,7 @@ import { ApiError } from '@/lib/api/client';
 import { getPaymentStatus, type PaymentStatus } from '@/lib/api/payments';
 import { uploadAvatar, type UploadableImage } from '@/lib/api/users';
 import { useAuth } from '@/providers/auth-provider';
+import { useNotificationPermission } from '@/providers/notification-permission-provider';
 import { usePreferences } from '@/providers/preferences-provider';
 import { SPACING } from '@/theme/globals';
 
@@ -84,8 +86,10 @@ export default function ProfileScreen() {
   const { isSoundEnabled, isHapticsEnabled, setSoundEnabled, setHapticsEnabled } =
     usePreferences();
   const { mode, isDark, setMode } = useModeToggle();
+  const { status: notificationStatus } = useNotificationPermission();
   const primary = useColor('primary');
   const muted = useColor('textMuted');
+  const border = useColor('border');
   const red = useColor('red');
   const green = useColor('green');
   const orange = useColor('orange');
@@ -114,7 +118,6 @@ export default function ProfileScreen() {
     // payment record) are both just "nothing to show" — the card hides either way.
     getPaymentStatus(userId)
       .then((status) => {
-        console.log(status)
         if (isMounted) setPaymentStatus(status);
       })
       .catch(() => {
@@ -412,6 +415,33 @@ export default function ProfileScreen() {
 
         <GroupedInput title='Preferences' titleStyle={{fontSize: 22}}>
           <MenuRow
+            icon={Bell}
+            label='Notifications'
+            onPress={() => Linking.openSettings()}
+            right={
+              <View style={styles.notificationStatusRight}>
+                <Text
+                  variant='caption'
+                  style={{
+                    color:
+                      notificationStatus === 'granted'
+                        ? green
+                        : notificationStatus === 'denied'
+                          ? red
+                          : muted,
+                  }}
+                >
+                  {notificationStatus === 'granted'
+                    ? 'On'
+                    : notificationStatus === 'denied'
+                      ? 'Off'
+                      : 'Not set'}
+                </Text>
+                <Icon name={ChevronRight} size={18} color={border} />
+              </View>
+            }
+          />
+          <MenuRow
             icon={Volume2}
             label='Sounds'
             right={<Switch value={isSoundEnabled} onValueChange={setSoundEnabled} />}
@@ -569,6 +599,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
+  },
+  notificationStatusRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   signOutButton: {
     width: '100%',

@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import {
   getInitialNotificationPath,
   registerForPushNotifications,
+  setupForegroundHandler,
   subscribeToNotificationOpened,
   subscribeToPushTokenRefresh,
 } from '@/lib/notifications';
@@ -19,23 +20,31 @@ export function useNotifications() {
 
     let isMounted = true;
 
-    registerForPushNotifications(userId).then((token) => {
+    const setupNotifications = async () => {
+      // Register (no-op until permission has been granted) and get token.
+      const token = await registerForPushNotifications(userId);
       if (isMounted) setExpoPushToken(token);
-    });
 
-    getInitialNotificationPath().then((path) => {
-      if (isMounted && path) router.push(path as Parameters<typeof router.push>[0]);
-    });
+      // Check if app was opened from a cold start via a notification tap.
+      const initialPath = await getInitialNotificationPath();
+      if (isMounted && initialPath) {
+        router.push(initialPath as Parameters<typeof router.push>[0]);
+      }
+    };
 
-    const unsubscribeOpened = subscribeToNotificationOpened((path) => {
+    void setupNotifications();
+
+    const unsubscribeTokenRefresh = subscribeToPushTokenRefresh(userId);
+    const unsubscribeForeground = setupForegroundHandler();
+    const unsubscribeNotificationOpened = subscribeToNotificationOpened((path) => {
       router.push(path as Parameters<typeof router.push>[0]);
     });
-    const unsubscribeRefresh = subscribeToPushTokenRefresh(userId);
 
     return () => {
       isMounted = false;
-      unsubscribeOpened();
-      unsubscribeRefresh();
+      unsubscribeTokenRefresh();
+      unsubscribeForeground();
+      unsubscribeNotificationOpened();
     };
   }, [userId]);
 
