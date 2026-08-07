@@ -18,8 +18,11 @@ Notifications.setNotificationHandler({
 const projectId: string | undefined =
   Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
-/** Required on Android 8+, and must exist before permissions are requested. */
-async function ensureAndroidChannel(): Promise<void> {
+/**
+ * Create the default Android notification channel.
+ * Required on Android 8+ and should exist before requesting permissions.
+ */
+async function setupAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('default', {
     name: 'Default',
@@ -29,25 +32,36 @@ async function ensureAndroidChannel(): Promise<void> {
   });
 }
 
-/** Read-only — never triggers the native OS prompt. Use this to decide whether the in-app "enable notifications" screen is needed. */
+/**
+ * Read-only — never triggers the native OS prompt. The old app didn't need
+ * this (it always asked during `initialize`), but the in-app "enable
+ * notifications" screen needs to know the status without side effects, to
+ * decide whether it belongs on screen at all.
+ */
 export async function getNotificationPermissionStatus(): Promise<Notifications.PermissionStatus> {
   const { status } = await Notifications.getPermissionsAsync();
   return status;
 }
 
-/**
- * Triggers the native OS permission dialog. Only call this from an explicit
- * user action (the "Enable Notifications" screen) — iOS shows this dialog
- * exactly once per install, so firing it automatically on launch burns that
- * one shot before the user has any context for what it's for.
- */
-export async function requestNotificationPermission(): Promise<boolean> {
-  await ensureAndroidChannel();
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === 'granted';
+/** Request notification permissions. Only call this from an explicit user action (the "Enable Notifications" screen's button). */
+export async function requestPermission(): Promise<boolean> {
+  try {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    return finalStatus === 'granted';
+  } catch {
+    return false;
+  }
 }
 
-async function getExpoPushToken(): Promise<string | null> {
+/** Get the Expo push token for this device. */
+async function getToken(): Promise<string | null> {
   try {
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
     return data;
@@ -56,47 +70,68 @@ async function getExpoPushToken(): Promise<string | null> {
   }
 }
 
-async function saveExpoPushToken(token: string, userId: string): Promise<void> {
-  await apiRequest('/notifications/tokens', {
-    method: 'POST',
-    body: { token, user_id: userId },
-  });
-}
-
-/** Fetches the current push token and persists it — shared by the initial registration and the token-refresh listener. */
-async function syncPushToken(userId: string): Promise<string | null> {
-  const token = await getExpoPushToken();
-  if (!token) return null;
-
+/** Save token to backend database. */
+async function saveTokenToDatabase(token: string, userId: string): Promise<void> {
   try {
-    await saveExpoPushToken(token, userId);
+    if (!token || !userId) return;
+    await apiRequest('/notifications/tokens', {
+      method: 'POST',
+      body: { token, user_id: userId },
+    });
   } catch {
     // Best-effort — a failed save shouldn't block push notifications from
     // working locally, and the refresh listener will get another chance.
   }
-  return token;
 }
 
 /**
  * Fetches and persists the push token, but only if permission has already
- * been granted — this never prompts. Safe to call on every launch/login;
- * it's a no-op until the user has said yes via the "enable notifications"
- * screen (or the OS permission was already granted in an earlier session).
+ * been granted — unlike the old app's `initialize`, this never prompts.
+ * Safe to call on every launch/login; it's a no-op until the user has said
+ * yes via the "enable notifications" screen (or the OS permission was
+ * already granted in an earlier session).
  */
 export async function registerForPushNotifications(userId: string): Promise<string | null> {
-  if (!Device.isDevice) return null;
+  try {
+    // Push tokens are only available on physical devices.
+    if (!Device.isDevice) return null;
 
-  const status = await getNotificationPermissionStatus();
-  if (status !== 'granted') return null;
+    // Channel must exist before requesting permissions on Android.
+    await setupAndroidChannel();
 
-  await ensureAndroidChannel();
-  return syncPushToken(userId);
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return null;
+
+    const token = await getToken();
+    if (!token) return null;
+
+    await saveTokenToDatabase(token, userId);
+
+    return token;
+  } catch {
+    return null;
+  }
 }
 
-/** The device's Expo push token can rotate while the app is running; re-sync it when it does. */
+/**
+ * Setup token refresh listener.
+ * The device push token can rotate while the app runs; when it does we
+ * re-fetch the Expo push token and persist it.
+ */
 export function subscribeToPushTokenRefresh(userId: string): () => void {
-  const subscription = Notifications.addPushTokenListener(() => {
-    void syncPushToken(userId);
+  const subscription = Notifications.addPushTokenListener(async () => {
+    const token = await getToken();
+    if (token && userId) {
+      await saveTokenToDatabase(token, userId);
+    }
+  });
+  return () => subscription.remove();
+}
+
+/** Setup foreground notification handler. */
+export function setupForegroundHandler(): () => void {
+  const subscription = Notifications.addNotificationReceivedListener(() => {
+    // Handle foreground notifications (update app state, badges, etc.)
   });
   return () => subscription.remove();
 }
@@ -121,6 +156,8 @@ export function resolveNotificationPath(data: unknown): string | null {
       return '/payments';
     case 'certificates':
       return '/certificates';
+    case 'progress':
+      return '/progress';
     default:
       return null;
   }
@@ -137,7 +174,11 @@ export function subscribeToNotificationOpened(onOpen: (path: string) => void): (
 
 /** Whether the current app launch was a cold start triggered by tapping a notification. */
 export async function getInitialNotificationPath(): Promise<string | null> {
-  const response = await Notifications.getLastNotificationResponseAsync();
-  if (!response) return null;
-  return resolveNotificationPath(response.notification.request.content.data);
+  try {
+    const response = await Notifications.getLastNotificationResponseAsync();
+    if (!response) return null;
+    return resolveNotificationPath(response.notification.request.content.data);
+  } catch {
+    return null;
+  }
 }
