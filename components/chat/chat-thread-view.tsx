@@ -1,9 +1,21 @@
 import { useThreadListNew } from '@assistant-ui/core/react';
-import { useAui, useAuiState } from '@assistant-ui/store';
+import { useAui, useAuiEvent, useAuiState } from '@assistant-ui/store';
 import { ActionBarPrimitive, ComposerPrimitive, MessagePrimitive, ThreadPrimitive } from '@assistant-ui/react-native';
-import { ArrowUp, Check, Copy, Menu, MessageSquarePlus, Share2, Sparkles, Square } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
-import { Clipboard, Platform, Pressable, Share, StyleSheet, TextInput } from 'react-native';
+import { ArrowUp, Check, ChevronDown, Copy, Menu, MessageSquarePlus, Share2, Sparkles, Square } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Clipboard,
+  Keyboard,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  TextInput,
+  type FlatList,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
@@ -111,7 +123,19 @@ function TypingIndicator() {
   );
 }
 
-function ChatMessage({ role }: { role: string }) {
+function ChatMessage({
+  id,
+  prevId,
+  role,
+  isLast,
+  onMeasured,
+}: {
+  id: string;
+  prevId: string | undefined;
+  role: string;
+  isLast: boolean;
+  onMeasured: (id: string, prevId: string | undefined, height: number) => void;
+}) {
   const isUser = role === 'user';
   const primary = useColor('primary');
   const card = useColor('card');
@@ -126,9 +150,11 @@ function ChatMessage({ role }: { role: string }) {
 
   return (
     <MessagePrimitive.Root
+      onLayout={(e) => onMeasured(id, prevId, e.nativeEvent.layout.height)}
       style={[
         styles.messageRow,
         isUser ? styles.messageRowUser : styles.messageRowAssistant,
+        isLast && styles.lastMessageRow,
       ]}
     >
       {!isUser && (
@@ -233,6 +259,7 @@ function ChatComposer() {
   const primaryForeground = useColor('primaryForeground');
   const muted = useColor('textMuted');
   const background = useColor('background');
+  const text = useColor('text');
   const insets = useSafeAreaInsets();
 
   return (
@@ -246,14 +273,14 @@ function ChatComposer() {
         <AndroidComposerInput
           placeholder='Ask anything…'
           placeholderTextColor={muted}
-          style={[styles.composerInput, { backgroundColor: card }]}
+          style={[styles.composerInput, { backgroundColor: card, color: text }]}
         />
       ) : (
         <ComposerPrimitive.Input
           placeholder='Ask anything…'
           placeholderTextColor={muted}
           multiline
-          style={[styles.composerInput, { backgroundColor: card }]}
+          style={[styles.composerInput, { backgroundColor: card, color: text }]}
         />
       )}
       <ThreadPrimitive.If running>
@@ -262,7 +289,10 @@ function ChatComposer() {
         </ComposerPrimitive.Cancel>
       </ThreadPrimitive.If>
       <ThreadPrimitive.If running={false}>
-        <ComposerPrimitive.Send style={[styles.sendButton, { backgroundColor: primary }]}>
+        <ComposerPrimitive.Send
+          onPressIn={Keyboard.dismiss}
+          style={[styles.sendButton, { backgroundColor: primary }]}
+        >
           <Icon name={ArrowUp} size={18} color={primaryForeground} />
         </ComposerPrimitive.Send>
       </ThreadPrimitive.If>
@@ -270,7 +300,94 @@ function ChatComposer() {
   );
 }
 
+const AT_BOTTOM_THRESHOLD = 24;
+
+/**
+ * ChatGPT-style scroll anchoring: when a new message is sent, the reply
+ * doesn't get chased to the bottom of the screen as it streams in — instead
+ * the user's message is pinned near the top (via `scrollToOffset`, computed
+ * from heights each message reports through `onMeasured`) and a footer
+ * spacer reserves the rest of the viewport for the reply to fill. If the
+ * reply outgrows that reserved space the scroll position holds still (no
+ * `autoScroll`) and a floating button appears so the user can jump down.
+ */
 export function ChatThreadView({ onOpenSidebar }: { onOpenSidebar: () => void }) {
+  const flatListRef = useRef<FlatList | null>(null);
+  const messages = useAuiState((s) => s.thread.messages);
+  const heightsRef = useRef(new Map<string, number>());
+  const offsetsRef = useRef(new Map<string, number>());
+  const viewportHeightRef = useRef(0);
+  const [footerHeight, setFooterHeight] = useState(0);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const foreground = useColor('foreground');
+  const card = useColor('card');
+
+  const messageIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    messages.forEach((message, index) => map.set(message.id, index));
+    return map;
+  }, [messages]);
+
+  const handleMessageMeasured = useCallback(
+    (id: string, prevId: string | undefined, height: number) => {
+      heightsRef.current.set(id, height);
+      if (!prevId) {
+        offsetsRef.current.set(id, SPACING.md);
+        return;
+      }
+      const prevOffset = offsetsRef.current.get(prevId);
+      const prevHeight = heightsRef.current.get(prevId);
+      if (prevOffset !== undefined && prevHeight !== undefined) {
+        offsetsRef.current.set(id, prevOffset + prevHeight + SPACING.sm);
+      }
+    },
+    []
+  );
+
+  useAuiEvent('thread.runStart', () => {
+    // The user message that triggered this run was just added — its layout
+    // hasn't landed yet, so wait a frame before reading measured heights.
+    requestAnimationFrame(() => {
+      const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user');
+      const viewportHeight = viewportHeightRef.current;
+      if (!lastUserMessage || !viewportHeight) return;
+
+      const offset = offsetsRef.current.get(lastUserMessage.id);
+      const height = heightsRef.current.get(lastUserMessage.id);
+      if (offset === undefined || height === undefined) return;
+
+      setFooterHeight(Math.max(0, viewportHeight - height));
+      flatListRef.current?.scrollToOffset({ offset: Math.max(0, offset - SPACING.xs), animated: true });
+    });
+  });
+
+  const scrollYRef = useRef(0);
+
+  const handleListLayout = useCallback((e: LayoutChangeEvent) => {
+    viewportHeightRef.current = e.nativeEvent.layout.height;
+  }, []);
+
+  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    scrollYRef.current = contentOffset.y;
+    const atBottom = contentSize.height - contentOffset.y - layoutMeasurement.height <= AT_BOTTOM_THRESHOLD;
+    setIsAtBottom(atBottom);
+  }, []);
+
+  // A streaming reply grows the content without firing a scroll event, so
+  // "am I still at the bottom" has to be re-derived here too — otherwise the
+  // jump-to-bottom button wouldn't appear until the user next touched the list.
+  const handleContentSizeChange = useCallback((_width: number, height: number) => {
+    const viewportHeight = viewportHeightRef.current;
+    if (!viewportHeight) return;
+    const atBottom = height - scrollYRef.current - viewportHeight <= AT_BOTTOM_THRESHOLD;
+    setIsAtBottom(atBottom);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    flatListRef.current?.scrollToEnd({ animated: true });
+  }, []);
+
   return (
     <ThreadPrimitive.Root style={styles.root}>
       <ChatHeader onOpenSidebar={onOpenSidebar} />
@@ -280,18 +397,48 @@ export function ChatThreadView({ onOpenSidebar }: { onOpenSidebar: () => void })
       </ThreadPrimitive.Empty>
 
       <ThreadPrimitive.MessagesFlatList
+        ref={flatListRef}
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        autoScroll
-        scrollToBottomOnRunStart
+        autoScroll={false}
+        scrollToBottomOnRunStart={false}
+        scrollToBottomOnInitialize
         scrollToBottomOnThreadSwitch
+        onLayout={handleListLayout}
+        onScroll={handleScroll}
+        onContentSizeChange={handleContentSizeChange}
+        scrollEventThrottle={16}
+        ListFooterComponent={<View style={{ height: footerHeight }} />}
       >
-        {({ message }) => <ChatMessage role={message.role} />}
+        {({ message }) => {
+          const index = messageIndexById.get(message.id) ?? 0;
+          const prevId = index > 0 ? messages[index - 1]?.id : undefined;
+          return (
+            <ChatMessage
+              id={message.id}
+              prevId={prevId}
+              role={message.role}
+              isLast={message.isLast}
+              onMeasured={handleMessageMeasured}
+            />
+          );
+        }}
       </ThreadPrimitive.MessagesFlatList>
 
-      <ChatComposer />
+      <View style={styles.composerWrap}>
+        {!isAtBottom && (
+          <Pressable
+            onPress={scrollToBottom}
+            style={[styles.scrollToBottomButton, { backgroundColor: card }]}
+          >
+            <Icon name={ChevronDown} size={20} color={foreground} />
+          </Pressable>
+        )}
 
-      <AvoidKeyboard />
+        <ChatComposer />
+      </View>
+
+      <AvoidKeyboard fastHide />
     </ThreadPrimitive.Root>
   );
 }
@@ -343,6 +490,9 @@ const styles = StyleSheet.create({
   },
   messageRowAssistant: {
     justifyContent: 'flex-start',
+  },
+  lastMessageRow: {
+    marginBottom: SPACING.xl,
   },
   avatar: {
     width: 28,
@@ -398,5 +548,25 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  composerWrap: {
+    position: 'relative',
+  },
+  scrollToBottomButton: {
+    position: 'absolute',
+    bottom: '100%',
+    alignSelf: 'center',
+    marginBottom: SPACING.sm,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    zIndex: 10,
   },
 });

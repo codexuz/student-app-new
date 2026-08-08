@@ -8,9 +8,16 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-type Props = { offset?: number; duration?: number };
+type Props = {
+  offset?: number;
+  duration?: number;
+  /** Collapse on hide with a short fixed duration instead of matching the (often ~250ms) native keyboard animation — a snappier "the composer just drops" feel instead of a slide that tracks the keyboard. Show behavior is unaffected. */
+  fastHide?: boolean;
+};
 
-export const AvoidKeyboard = ({ offset = 0, duration = 0 }: Props) => {
+const FAST_HIDE_DURATION = 100;
+
+export const AvoidKeyboard = ({ offset = 0, duration = 0, fastHide = false }: Props) => {
   const { keyboardHeight, isKeyboardVisible, keyboardAnimationDuration } =
     useKeyboardHeight();
   const reduceMotion = useReducedMotion();
@@ -25,6 +32,14 @@ export const AvoidKeyboard = ({ offset = 0, duration = 0 }: Props) => {
 
     if (reduceMotion) {
       keyboardValue.value = targetHeight;
+      return;
+    }
+
+    if (!isKeyboardVisible && fastHide) {
+      keyboardValue.value = withTiming(0, {
+        duration: FAST_HIDE_DURATION,
+        easing: Easing.out(Easing.quad),
+      });
       return;
     }
 
@@ -43,6 +58,7 @@ export const AvoidKeyboard = ({ offset = 0, duration = 0 }: Props) => {
     isKeyboardVisible,
     offset,
     duration,
+    fastHide,
     reduceMotion,
   ]);
 
