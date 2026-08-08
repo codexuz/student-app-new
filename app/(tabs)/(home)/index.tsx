@@ -18,7 +18,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <Text variant='heading'>Welcome back</Text>
 
-      <Pressable onPress={() => router.push('/(ai-chat)')}>
+      <Pressable onPress={() => router.push('/(ai-chat)/chat')}>
         <Card>
           <View style={styles.cardRow}>
             <View style={[styles.iconBadge, { backgroundColor: accent }]}>

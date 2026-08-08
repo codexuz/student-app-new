@@ -27,7 +27,7 @@ export default function AiChatLayout() {
         }}
         drawerContent={(props) => <ChatThreadListSidebar {...props} />}
       >
-        <Drawer.Screen name='index' />
+        <Drawer.Screen name='chat' />
       </Drawer>
     </AiChatProvider>
   );
