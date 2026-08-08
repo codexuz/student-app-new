@@ -118,6 +118,15 @@ function RootNavigator() {
           <Stack.Screen name='edit-profile' options={{ headerShown: true, title: 'Edit Profile' }} />
           <Stack.Screen name='certificates' options={{ headerShown: true, title: 'Certificates' }} />
           <Stack.Screen name='payments' options={{ headerShown: true, title: 'Payment History' }} />
+          <Stack.Screen name='roadmap' options={{ headerShown: true, title: 'Roadmap' }} />
+          <Stack.Screen name='lesson' options={{ headerShown: true, title: 'Lesson' }} />
+          <Stack.Screen name='theory' options={{ headerShown: true, title: 'Theory' }} />
+          <Stack.Screen name='exercise-list' options={{ headerShown: true, title: 'Exercises' }} />
+          <Stack.Screen name='exercise' options={{ headerShown: true, title: 'Exercise' }} />
+          <Stack.Screen name='writing' options={{ headerShown: true, title: 'Writing' }} />
+          <Stack.Screen name='speaking-list' options={{ headerShown: true, title: 'Speaking' }} />
+          <Stack.Screen name='speaking' options={{ headerShown: true, title: 'Speaking' }} />
+          <Stack.Screen name='pronunciation' options={{ headerShown: true, title: 'Pronunciation' }} />
         </Stack.Protected>
 
         <Stack.Protected guard={isAuthenticated && shouldPromptForNotifications}>

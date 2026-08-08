@@ -1,4 +1,5 @@
-import { apiRequest } from '@/lib/api/client';
+import { apiRequest, ApiError } from '@/lib/api/client';
+import type { CourseProgressItem } from '@/lib/api/curriculum-types';
 
 /**
  * One row per course the student has ever been enrolled in, including levels
@@ -22,4 +23,22 @@ export interface Enrollment {
 export async function getMyCourses(): Promise<Enrollment[]> {
   const data = await apiRequest<unknown>('/user-courses/me');
   return Array.isArray(data) ? (data as Enrollment[]) : [];
+}
+
+/**
+ * Progress for the course(s) tied to the student's currently active group(s)
+ * — the roadmap's source of truth, distinct from `getMyCourses` above (the
+ * all-time enrollment ledger). 404s when the student has no active English
+ * group, which just means "nothing to show" rather than an error.
+ */
+export async function getMyCourseProgress(): Promise<CourseProgressItem[]> {
+  try {
+    const data = await apiRequest<unknown>('/courses/progress-all/me');
+    return Array.isArray(data) ? (data as CourseProgressItem[]) : [];
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
+      return [];
+    }
+    throw error;
+  }
 }
