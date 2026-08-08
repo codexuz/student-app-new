@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { ChevronRight, Sparkles } from 'lucide-react-native';
+import { ChevronRight, Phone, Sparkles } from 'lucide-react-native';
 
 import { Card } from '@/components/ui/card';
 import { CircularProgress } from '@/components/ui/circular-progress';
@@ -83,6 +83,27 @@ export default function HomeScreen() {
               </Text>
               <Text variant='caption' style={{ marginTop: 2 }}>
                 Ask your AI tutor about grammar, vocabulary, or IELTS prep
+              </Text>
+            </View>
+
+            <Icon name={ChevronRight} size={20} color={muted} />
+          </View>
+        </Card>
+      </Pressable>
+
+      <Pressable onPress={() => router.push('/ai-call')}>
+        <Card>
+          <View style={styles.cardRow}>
+            <View style={[styles.iconBadge, { backgroundColor: accent }]}>
+              <Icon name={Phone} size={22} color={primary} />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text variant='body' style={{ fontWeight: '600' }}>
+                AI Call
+              </Text>
+              <Text variant='caption' style={{ marginTop: 2 }}>
+                Practice speaking with your AI tutor in a live call
               </Text>
             </View>
 

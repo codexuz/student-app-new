@@ -216,7 +216,7 @@ export default function ExerciseRunnerScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={{...styles.footer, borderTopColor: border}}>
         {showResult ? (
           <Button size='lg' style={{ width: '100%' }} onPress={handleContinue} disabled={submitting}>
             {submitting ? 'Submitting…' : isLast ? 'See Results' : 'Continue'}

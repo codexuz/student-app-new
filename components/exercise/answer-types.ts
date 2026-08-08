@@ -9,7 +9,7 @@ export interface GapFillingAnswer {
   values: Record<number, string>;
 }
 export interface MatchingAnswer {
-  /** left_item -> right_item */
+  /** pair id (from the left column) -> pair id (from the right column) */
   matches: Record<string, string>;
 }
 export interface SentenceBuildAnswer {

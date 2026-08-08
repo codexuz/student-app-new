@@ -37,72 +37,71 @@ export function MatchingQuestion({
   const feedback = useHaptics(true);
 
   const pairs = useMemo(() => question.matching_pairs ?? [], [question.matching_pairs]);
-  const leftItems = useMemo(() => shuffle(pairs.map((p) => p.left_item)), [pairs]);
-  const rightItems = useMemo(() => shuffle(pairs.map((p) => p.right_item)), [pairs]);
+  const leftItems = useMemo(() => shuffle(pairs.map((p) => ({ id: p.id, text: p.left_item }))), [pairs]);
+  const rightItems = useMemo(() => shuffle(pairs.map((p) => ({ id: p.id, text: p.right_item }))), [pairs]);
 
-  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
-  const matchedRight = new Set(Object.values(value.matches));
+  const [selectedLeftId, setSelectedLeftId] = useState<string | null>(null);
+  const matchedRightIds = new Set(Object.values(value.matches));
 
-  const rightForLeft = (left: string) => value.matches[left];
+  const rightIdForLeftId = (leftId: string) => value.matches[leftId];
 
-  const selectLeft = (left: string) => {
-    if (showResult || rightForLeft(left)) return;
+  const selectLeft = (leftId: string) => {
+    if (showResult || rightIdForLeftId(leftId)) return;
     feedback('selection');
-    setSelectedLeft(selectedLeft === left ? null : left);
+    setSelectedLeftId(selectedLeftId === leftId ? null : leftId);
   };
 
-  const selectRight = (right: string) => {
-    if (showResult || matchedRight.has(right) || !selectedLeft) return;
+  const selectRight = (rightId: string) => {
+    if (showResult || matchedRightIds.has(rightId) || !selectedLeftId) return;
     feedback('selection');
-    onChange({ matches: { ...value.matches, [selectedLeft]: right } });
-    setSelectedLeft(null);
+    onChange({ matches: { ...value.matches, [selectedLeftId]: rightId } });
+    setSelectedLeftId(null);
   };
 
-  const isPairCorrect = (left: string) => {
-    const pair = pairs.find((p) => p.left_item === left);
-    return pair && value.matches[left] === pair.right_item;
-  };
+  const isPairCorrect = (leftId: string) => value.matches[leftId] === leftId;
 
   return (
     <View style={styles.columns}>
       <View style={styles.column}>
-        {leftItems.map((left) => {
-          const matched = !!rightForLeft(left);
-          const correct = showResult && matched ? isPairCorrect(left) : null;
+        {leftItems.map(({ id, text }) => {
+          const matched = !!rightIdForLeftId(id);
+          const correct = showResult && matched ? isPairCorrect(id) : null;
+          const highlighted = selectedLeftId === id || matched;
           const backgroundColor =
-            correct === true ? `${green}22` : correct === false ? `${red}22` : selectedLeft === left ? `${primary}18` : card;
+            correct === true ? `${green}22` : correct === false ? `${red}22` : highlighted ? `${primary}18` : card;
           const borderColor =
-            correct === true ? green : correct === false ? red : selectedLeft === left ? primary : border;
+            correct === true ? green : correct === false ? red : highlighted ? primary : border;
 
           return (
             <Pressable
-              key={left}
+              key={id}
               disabled={showResult || matched}
-              onPress={() => selectLeft(left)}
+              onPress={() => selectLeft(id)}
               style={[styles.chip, { backgroundColor, borderColor }]}
             >
-              <Text variant='caption'>{left}</Text>
+              <Text variant='caption'>{text}</Text>
             </Pressable>
           );
         })}
       </View>
 
       <View style={styles.column}>
-        {rightItems.map((right) => {
-          const matched = matchedRight.has(right);
-          const leftForThis = Object.entries(value.matches).find(([, r]) => r === right)?.[0];
-          const correct = showResult && leftForThis ? isPairCorrect(leftForThis) : null;
-          const backgroundColor = correct === true ? `${green}22` : correct === false ? `${red}22` : card;
-          const borderColor = correct === true ? green : correct === false ? red : border;
+        {rightItems.map(({ id, text }) => {
+          const matched = matchedRightIds.has(id);
+          const leftIdForThis = Object.entries(value.matches).find(([, r]) => r === id)?.[0];
+          const correct = showResult && leftIdForThis ? isPairCorrect(leftIdForThis) : null;
+          const backgroundColor =
+            correct === true ? `${green}22` : correct === false ? `${red}22` : matched ? `${primary}18` : card;
+          const borderColor = correct === true ? green : correct === false ? red : matched ? primary : border;
 
           return (
             <Pressable
-              key={right}
+              key={id}
               disabled={showResult || matched}
-              onPress={() => selectRight(right)}
+              onPress={() => selectRight(id)}
               style={[styles.chip, { backgroundColor, borderColor }]}
             >
-              <Text variant='caption'>{right}</Text>
+              <Text variant='caption'>{text}</Text>
             </Pressable>
           );
         })}

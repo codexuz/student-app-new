@@ -67,7 +67,7 @@ export function isAnswerComplete(question: Question, answer: QuestionAnswerValue
     case 'matching': {
       const pairs = question.matching_pairs ?? [];
       const { matches } = answer as MatchingAnswer;
-      return pairs.length > 0 && pairs.every((pair) => matches[pair.left_item] != null);
+      return pairs.length > 0 && pairs.every((pair) => matches[pair.id] != null);
     }
     case 'sentence_build': {
       const items = question.sentence_build ?? [];
@@ -119,7 +119,7 @@ export function gradeQuestion(question: Question, answer: QuestionAnswerValue): 
       const pairs = question.matching_pairs ?? [];
       const { matches } = answer as MatchingAnswer;
       if (pairs.length === 0) return { isCorrect: false, points: 0 };
-      const correctCount = pairs.filter((pair) => matches[pair.left_item] === pair.right_item).length;
+      const correctCount = pairs.filter((pair) => matches[pair.id] === pair.id).length;
       const ratio = correctCount / pairs.length;
       return { isCorrect: ratio === 1, points: Math.round(points * ratio) };
     }
