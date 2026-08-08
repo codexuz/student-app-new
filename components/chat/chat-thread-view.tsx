@@ -5,6 +5,15 @@ import { ArrowUp, Check, Copy, Menu, MessageSquarePlus, Share2, Sparkles, Square
 import { useEffect, useRef, useState } from 'react';
 import { Clipboard, Platform, Pressable, Share, StyleSheet, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { MarkdownMessage } from '@/components/chat/markdown-message';
 import { AvoidKeyboard } from '@/components/ui/avoid-keyboard';
@@ -65,12 +74,55 @@ function MessageActionBar() {
   );
 }
 
+/** One bouncing dot in the typing indicator; `delay` staggers it against its siblings. */
+function TypingDot({ delay, color }: { delay: number; color: string }) {
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(-4, { duration: 300, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: 300, easing: Easing.in(Easing.quad) })
+        ),
+        -1
+      )
+    );
+  }, [delay, translateY]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return <Animated.View style={[styles.typingDot, { backgroundColor: color }, animatedStyle]} />;
+}
+
+/** Shown in place of the bubble's content while the assistant is running but hasn't streamed any text yet. */
+function TypingIndicator() {
+  const muted = useColor('textMuted');
+
+  return (
+    <View style={styles.typingRow}>
+      <TypingDot delay={0} color={muted} />
+      <TypingDot delay={120} color={muted} />
+      <TypingDot delay={240} color={muted} />
+    </View>
+  );
+}
+
 function ChatMessage({ role }: { role: string }) {
   const isUser = role === 'user';
   const primary = useColor('primary');
   const card = useColor('card');
   const foreground = useColor('foreground');
   const primaryForeground = useColor('primaryForeground');
+  const isTyping = useAuiState(
+    (s) =>
+      s.message.role === 'assistant' &&
+      s.message.status.type === 'running' &&
+      s.message.content.length === 0
+  );
 
   return (
     <MessagePrimitive.Root
@@ -93,18 +145,22 @@ function ChatMessage({ role }: { role: string }) {
               : { backgroundColor: card, borderBottomLeftRadius: 4 },
           ]}
         >
-          <MessagePrimitive.Content
-            renderText={({ part, index }) => (
-              <MarkdownMessage
-                key={index}
-                content={part.text}
-                textColor={isUser ? primaryForeground : undefined}
-              />
-            )}
-          />
+          {isTyping ? (
+            <TypingIndicator />
+          ) : (
+            <MessagePrimitive.Content
+              renderText={({ part, index }) => (
+                <MarkdownMessage
+                  key={index}
+                  content={part.text}
+                  textColor={isUser ? primaryForeground : undefined}
+                />
+              )}
+            />
+          )}
         </View>
 
-        {!isUser && <MessageActionBar />}
+        {!isUser && !isTyping && <MessageActionBar />}
       </View>
     </MessagePrimitive.Root>
   );
@@ -307,6 +363,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.xs,
     marginTop: SPACING.xs / 2,
+  },
+  typingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 2,
+  },
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   actionButton: {
     padding: SPACING.xs,
