@@ -69,7 +69,7 @@ const lightColors = {
   red: '#DC2626',
 
   // Warning states, streak/reward highlights
-  orange: '#D97706',
+  orange: '#f48405',
 
   // Coins, badges, achievement highlights
   yellow: '#CA8A04',
