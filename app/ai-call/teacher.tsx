@@ -6,19 +6,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AiCallConfirmSheet } from '@/components/AiCallConfirmSheet';
-import { AvatarLipsync } from '@/components/AvatarLipsync';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
 import { useColor } from '@/hooks/useColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAiCall, type AiCallPhase } from '@/hooks/useAiCall';
-
-// Drop a rigged .glb with a `mouthOpen` morph target at
-// assets/models/avatar-head.glb and uncomment to enable the 3D avatar —
-// see AvatarLipsync's `morphTargetName` prop if the model uses a different
-// morph/blendshape name. Until then AvatarLipsync renders nothing and the
-// call screen falls back to the VoiceOrb.
-const AVATAR_MODEL: number | undefined = undefined;
-// const AVATAR_MODEL = require('@/assets/models/avatar-head.glb');
 
 const IELTS_INSTRUCTIONS = `You are an AI IELTS Speaking Examiner. Conduct the speaking test in a professional, natural, and realistic IELTS format.
 
@@ -217,11 +208,6 @@ export default function AiCallTeacherScreen() {
             size={300}
             volume={mouthOpen}
             style={StyleSheet.absoluteFill}
-          />
-          <AvatarLipsync
-            source={AVATAR_MODEL}
-            mouthOpen={callActive && !muted ? mouthOpen : 0}
-            size={220}
           />
         </View>
         <Text style={[styles.phase, { color: textMuted }]}>
