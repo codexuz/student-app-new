@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useColor } from '@/hooks/useColor';
-import { Platform, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 
@@ -12,8 +12,8 @@ export default function GradesLayout() {
   return (
     <Stack
       screenOptions={{
-        headerLargeTitle: true,
-        headerLargeTitleShadowVisible: false,
+        headerTitleAlign: 'center',
+        headerShadowVisible: false,
         headerTintColor: text,
         headerBlurEffect: isLiquidGlassAvailable()
           ? undefined
@@ -31,10 +31,7 @@ export default function GradesLayout() {
         name='index'
         options={{
           title: 'Grades',
-          headerTitle: () =>
-            Platform.OS === 'android' ? (
-              <Text variant='heading'>Grades</Text>
-            ) : undefined,
+          headerTitle: () => <Text variant='subtitle'>Grades</Text>,
         }}
       />
     </Stack>

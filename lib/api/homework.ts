@@ -1,5 +1,6 @@
 import { apiRequest } from '@/lib/api/client';
 import type {
+  HomeworkStats,
   SubmitHomeworkSectionInput,
   SubmitHomeworkSectionResult,
 } from '@/lib/api/curriculum-types';
@@ -17,4 +18,13 @@ export async function submitHomeworkSection(
     method: 'POST',
     body: input,
   });
+}
+
+/**
+ * All-time homework averages by section (reading/listening/grammar/writing/
+ * speaking), plus an overall average and per-section score trend. Speaking
+ * scores fold in pronunciation-response scores alongside homework sections.
+ */
+export async function getStudentHomeworkStats(studentId: string): Promise<HomeworkStats> {
+  return apiRequest<HomeworkStats>(`/homework-submissions/student/${studentId}/stats`);
 }

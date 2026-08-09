@@ -308,3 +308,18 @@ export interface SubmitHomeworkSectionResult {
   section: { id: string; score: number | null; section: HomeworkSection; answers: Record<string, unknown> };
   rewards: HomeworkRewards | null;
 }
+
+// ---------------------------------------------------------------------------
+// Homework stats (GET /homework-submissions/student/:studentId/stats)
+// ---------------------------------------------------------------------------
+
+export interface HomeworkSectionStats {
+  average: number;
+  submissions: number;
+  trend: number[];
+}
+
+export interface HomeworkStats {
+  overall: number;
+  sections: Partial<Record<HomeworkSection, HomeworkSectionStats>>;
+}

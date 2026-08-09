@@ -119,6 +119,7 @@ function RootNavigator() {
           <Stack.Screen name='certificates' options={{ headerShown: true, title: 'Certificates' }} />
           <Stack.Screen name='payments' options={{ headerShown: true, title: 'Payment History' }} />
           <Stack.Screen name='(course)' options={{ headerShown: false }} />
+          <Stack.Screen name='(shop)' options={{ headerShown: false }} />
         </Stack.Protected>
 
         <Stack.Protected guard={isAuthenticated && shouldPromptForNotifications}>

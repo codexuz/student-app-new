@@ -58,12 +58,12 @@ export default function TabsLayout() {
 
       <NativeTabs.Trigger name='progress'>
         {Platform.select({
-          ios: <Icon sf='chart.bar.fill' />,
+          ios: <Icon sf='trophy.fill' />,
           android: (
-            <Icon src={<VectorIcon family={MaterialIcons} name='trending-up' />} />
+            <Icon src={<VectorIcon family={MaterialIcons} name='bar-chart-2' />} />
           ),
         })}
-        <Label>Progress</Label>
+        <Label>Leaderboard</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name='profile'>

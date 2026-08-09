@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Dimensions, Pressable, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, GraduationCap, Lock, Play } from 'lucide-react-native';
 
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { Icon } from '@/components/ui/icon';
+import { RoadmapHeader } from '@/components/roadmap-header';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
@@ -237,6 +238,7 @@ export default function RoadmapScreen() {
   if (error) {
     return (
       <View style={styles.centerFill}>
+        <Stack.Screen options={{ headerShown: false }} />
         <Icon name={GraduationCap} size={40} color={muted} />
         <Text variant='subtitle' style={{ textAlign: 'center' }}>
           Couldn&apos;t load your roadmap
@@ -251,17 +253,26 @@ export default function RoadmapScreen() {
   if (!units) {
     return (
       <View style={styles.centerFill}>
+        <Stack.Screen options={{ headerShown: false }} />
         <Spinner size='lg' />
       </View>
     );
   }
 
+  const totalCompleted = units.reduce((sum, unit) => sum + unit.completed, 0);
+  const totalLessons = units.reduce((sum, unit) => sum + unit.total, 0);
+  const overallPercentage = totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0;
+
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-      {units.map((unit, index) => (
-        <UnitSection key={unit.unit_id} unit={unit} index={index} />
-      ))}
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <RoadmapHeader percentage={overallPercentage} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.container, { paddingTop: SPACING.lg }]}>
+        {units.map((unit, index) => (
+          <UnitSection key={unit.unit_id} unit={unit} index={index} />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 

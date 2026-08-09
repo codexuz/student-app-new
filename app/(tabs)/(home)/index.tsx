@@ -1,24 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronRight, Phone, Sparkles } from 'lucide-react-native';
 
-import { Card } from '@/components/ui/card';
-import { CircularProgress } from '@/components/ui/circular-progress';
-import { Icon } from '@/components/ui/icon';
+import { AiPracticeCarousel, buildDefaultAiCards } from '@/components/ai-practice-card';
+import { CourseProgressCard } from '@/components/course-progress-card';
+import { HomeHeader } from '@/components/home-header';
 import { ScrollView } from '@/components/ui/scroll-view';
-import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
+import { useAuth } from '@/providers/auth-provider';
 import { getMyCourseProgress } from '@/lib/api/courses';
 import type { CourseProgressItem } from '@/lib/api/curriculum-types';
+import { getMyStudentProfile, type StudentProfile } from '@/lib/api/student-profile';
 import { SPACING } from '@/theme/globals';
 
 export default function HomeScreen() {
-  const primary = useColor('primary');
-  const accent = useColor('accent');
-  const muted = useColor('textMuted');
+  const background = useColor('background');
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [courses, setCourses] = useState<CourseProgressItem[]>([]);
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -31,18 +33,40 @@ export default function HomeScreen() {
         if (isMounted) setCourses([]);
       });
 
+    if (user?.user_id) {
+      getMyStudentProfile(user.user_id)
+        .then((data) => {
+          if (isMounted) setProfile(data);
+        })
+        .catch(() => {
+          if (isMounted) setProfile(null);
+        });
+    }
+
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user?.user_id]);
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-      <Text variant='heading'>Welcome back</Text>
+    <View style={{ flex: 1 }}>
+      <View style={[styles.stickyHeader, { paddingTop: insets.top, backgroundColor: background }]}>
+        <HomeHeader
+          firstName={user?.first_name || user?.username || 'User'}
+          avatarUrl={user?.avatar_url}
+          streak={profile?.streaks ?? 0}
+          coins={profile?.coins ?? 0}
+        />
+      </View>
 
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
       {courses.map((course) => (
-        <Pressable
+        <CourseProgressCard
           key={course.course_id}
+          stepsCompleted={course.completed}
+          totalSteps={course.total}
+          courseName={course.course_name}
+          percentage={course.percentage}
           onPress={() =>
             course.group_id &&
             router.push({
@@ -50,87 +74,28 @@ export default function HomeScreen() {
               params: { courseId: course.course_id, groupId: course.group_id },
             })
           }
-        >
-          <Card>
-            <View style={styles.cardRow}>
-              <CircularProgress percentage={course.percentage} size={48} strokeWidth={4} />
-
-              <View style={{ flex: 1 }}>
-                <Text variant='body' style={{ fontWeight: '600' }}>
-                  {course.course_name}
-                </Text>
-                <Text variant='caption' style={{ marginTop: 2 }}>
-                  {course.completed}/{course.total} lessons completed
-                </Text>
-              </View>
-
-              <Icon name={ChevronRight} size={20} color={muted} />
-            </View>
-          </Card>
-        </Pressable>
+        />
       ))}
 
-      <Pressable onPress={() => router.push('/(ai-chat)/chat')}>
-        <Card>
-          <View style={styles.cardRow}>
-            <View style={[styles.iconBadge, { backgroundColor: accent }]}>
-              <Icon name={Sparkles} size={22} color={primary} />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text variant='body' style={{ fontWeight: '600' }}>
-                AI Chat
-              </Text>
-              <Text variant='caption' style={{ marginTop: 2 }}>
-                Ask your AI tutor about grammar, vocabulary, or IELTS prep
-              </Text>
-            </View>
-
-            <Icon name={ChevronRight} size={20} color={muted} />
-          </View>
-        </Card>
-      </Pressable>
-
-      <Pressable onPress={() => router.push('/ai-call')}>
-        <Card>
-          <View style={styles.cardRow}>
-            <View style={[styles.iconBadge, { backgroundColor: accent }]}>
-              <Icon name={Phone} size={22} color={primary} />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text variant='body' style={{ fontWeight: '600' }}>
-                AI Call
-              </Text>
-              <Text variant='caption' style={{ marginTop: 2 }}>
-                Practice speaking with your AI tutor in a live call
-              </Text>
-            </View>
-
-            <Icon name={ChevronRight} size={20} color={muted} />
-          </View>
-        </Card>
-      </Pressable>
-    </ScrollView>
+      <AiPracticeCarousel
+        cards={buildDefaultAiCards({
+          onChatPress: () => router.push('/(ai-chat)/chat'),
+          onCallPress: () => router.push('/ai-call'),
+        })}
+      />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  stickyHeader: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
   container: {
     flexGrow: 1,
     gap: SPACING.md,
-    padding: SPACING.lg,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-  iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: SPACING.md,
   },
 });
