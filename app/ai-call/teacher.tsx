@@ -5,8 +5,9 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AiCallConfirmSheet } from '@/components/AiCallConfirmSheet';
-import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
+import { AiCallConfirmSheet } from '@/components/ai-call/AiCallConfirmSheet';
+import { AiCallSettingsSheet } from '@/components/ai-call/AiCallSettingsSheet';
+import { VoiceOrb, type VoiceOrbState, type VoiceOrbVariant } from '@/components/ai-call/VoiceOrb';
 import { useColor } from '@/hooks/useColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAiCall, type AiCallPhase } from '@/hooks/useAiCall';
@@ -114,6 +115,8 @@ export default function AiCallTeacherScreen() {
   const textMuted = useColor('textMuted');
   const red = useColor('red');
   const card = useColor('card');
+  const primary = useColor('primary');
+  const background = useColor('background');
   const insets = useSafeAreaInsets();
   const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
   const modeKey = modeParam && MODES[modeParam] ? modeParam : 'default';
@@ -122,7 +125,6 @@ export default function AiCallTeacherScreen() {
   const {
     phase,
     aiTranscript,
-    userTranscript,
     error,
     secondsLeft,
     muted,
@@ -135,6 +137,10 @@ export default function AiCallTeacherScreen() {
   const lowTime = secondsLeft <= 60;
 
   const [confirmVisible, setConfirmVisible] = useState(true);
+  const [showCaptions, setShowCaptions] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [orbVariant, setOrbVariant] = useState<VoiceOrbVariant>('blue');
+  const [orbSize, setOrbSize] = useState(300);
   const startedRef = useRef(false);
 
   const handleConfirm = () => {
@@ -170,47 +176,64 @@ export default function AiCallTeacherScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[isDark ? '#0f0c29' : '#e0eafc', isDark ? '#302b63' : '#cfdef3']}
+        colors={[primary, isDark ? '#0A0F1A' : '#FFFFFF', background]}
+        locations={[0, 0.55, 1]}
         style={StyleSheet.absoluteFill}
       />
       <View style={[styles.content, { paddingTop: insets.top + 16 }]}>
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={handleEnd} hitSlop={12}>
-          <Ionicons name="chevron-back" size={28} color={text} />
+        <TouchableOpacity onPress={handleEnd} hitSlop={12} style={styles.topBarIconBtn}>
+          <Ionicons name="chevron-back" size={26} color="#fff" />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: text }]}>{modeConfig.title}</Text>
-        {callActive ? (
-          <View
+        <View style={styles.topBarRight}>
+          <TouchableOpacity
+            onPress={() => setSettingsVisible(true)}
+            hitSlop={12}
+            style={[styles.captionBtn, { backgroundColor: 'rgba(255,255,255,0.12)' }]}
+          >
+            <Ionicons name="settings-outline" size={17} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setShowCaptions((v) => !v)}
+            hitSlop={12}
             style={[
-              styles.timerPill,
-              { backgroundColor: lowTime ? red + '22' : card },
+              styles.captionBtn,
+              { backgroundColor: showCaptions ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.12)' },
             ]}
           >
             <Ionicons
-              name="time-outline"
-              size={14}
-              color={lowTime ? red : textMuted}
+              name={showCaptions ? 'chatbox' : 'chatbox-outline'}
+              size={17}
+              color="#fff"
             />
-            <Text style={[styles.timerText, { color: lowTime ? red : textMuted }]}>
-              {formatClock(secondsLeft)}
-            </Text>
-          </View>
-        ) : (
-          <View style={{ width: 28 }} />
-        )}
+          </TouchableOpacity>
+          {callActive ? (
+            <View
+              style={[
+                styles.timerPill,
+                { backgroundColor: lowTime ? 'rgba(239,68,68,0.85)' : 'rgba(255,255,255,0.16)' },
+              ]}
+            >
+              <Ionicons name="time-outline" size={13} color="#fff" />
+              <Text style={styles.timerText}>{formatClock(secondsLeft)}</Text>
+            </View>
+          ) : (
+            <View style={{ width: 32 }} />
+          )}
+        </View>
       </View>
 
       <View style={styles.center}>
-        <View style={styles.avatarStack}>
+        <View style={[styles.avatarStack, { width: orbSize, height: orbSize }]}>
           <VoiceOrb
             state={orbStateFor(phase, muted)}
-            variant="blue"
-            size={300}
+            variant={orbVariant}
+            size={orbSize}
             volume={mouthOpen}
             style={StyleSheet.absoluteFill}
           />
         </View>
-        <Text style={[styles.phase, { color: textMuted }]}>
+        <Text style={[styles.phase, { color: '#fff' }]}>
           {error ? error : PHASE_LABEL[phase]}
         </Text>
       </View>
@@ -219,23 +242,13 @@ export default function AiCallTeacherScreen() {
         style={styles.transcripts}
         contentContainerStyle={{ paddingBottom: 16 }}
       >
-        {userTranscript ? (
-          <BlurView
-            intensity={isDark ? 30 : 60}
-            tint={isDark ? 'dark' : 'light'}
-            style={[styles.bubble, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)' }]}
-          >
-            <Text style={[styles.bubbleRole, { color: textMuted }]}>You</Text>
-            <Text style={[styles.bubbleText, { color: text }]}>{userTranscript}</Text>
-          </BlurView>
-        ) : null}
-        {aiTranscript ? (
+        {showCaptions && aiTranscript ? (
           <BlurView
             intensity={isDark ? 40 : 80}
             tint={isDark ? 'dark' : 'light'}
-            style={[styles.bubble, { backgroundColor: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.1)' }]}
+            style={[styles.bubble, { backgroundColor: isDark ? 'rgba(16,85,248,0.12)' : 'rgba(16,85,248,0.06)' }]}
           >
-            <Text style={[styles.bubbleRole, { color: '#8B5CF6' }]}>
+            <Text style={[styles.bubbleRole, { color: primary }]}>
               {modeConfig.roleLabel}
             </Text>
             <Text style={[styles.bubbleText, { color: text }]}>{aiTranscript}</Text>
@@ -250,28 +263,22 @@ export default function AiCallTeacherScreen() {
               activeOpacity={0.85}
               onPress={toggleMute}
               disabled={!callActive}
+              style={[styles.shadowBtn, { opacity: callActive ? 1 : 0.4 }]}
             >
-              <BlurView
-                intensity={80}
-                tint={isDark ? 'dark' : 'light'}
+              <View
                 style={[
                   styles.muteBtn,
                   {
-                    backgroundColor: muted
-                      ? 'rgba(239, 68, 68, 0.75)'
-                      : isDark
-                        ? 'rgba(255,255,255,0.12)'
-                        : 'rgba(0,0,0,0.06)',
-                    opacity: callActive ? 1 : 0.4,
+                    backgroundColor: muted ? red : card,
                   },
                 ]}
               >
                 <Ionicons
                   name={muted ? 'mic-off' : 'mic'}
-                  size={26}
+                  size={25}
                   color={muted ? '#fff' : text}
                 />
-              </BlurView>
+              </View>
             </TouchableOpacity>
             <Text style={[styles.ctrlLabel, { color: textMuted }]}>
               {muted ? 'Unmute' : 'Mute'}
@@ -279,15 +286,15 @@ export default function AiCallTeacherScreen() {
           </View>
 
           <View style={styles.controlItem}>
-            <TouchableOpacity activeOpacity={0.85} onPress={handleEnd}>
-              <BlurView intensity={80} tint="dark" style={[styles.endBtn, { backgroundColor: 'rgba(239, 68, 68, 0.75)' }]}>
+            <TouchableOpacity activeOpacity={0.85} onPress={handleEnd} style={styles.shadowBtnEnd}>
+              <View style={[styles.endBtn, { backgroundColor: red }]}>
                 <Ionicons
                   name="call"
-                  size={28}
+                  size={27}
                   color="#fff"
                   style={{ transform: [{ rotate: '135deg' }] }}
                 />
-              </BlurView>
+              </View>
             </TouchableOpacity>
             <Text style={[styles.ctrlLabel, { color: textMuted }]}>End call</Text>
           </View>
@@ -299,6 +306,14 @@ export default function AiCallTeacherScreen() {
         visible={confirmVisible}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
+      />
+      <AiCallSettingsSheet
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+        orbVariant={orbVariant}
+        onOrbVariantChange={setOrbVariant}
+        orbSize={orbSize}
+        onOrbSizeChange={setOrbSize}
       />
     </View>
   );
@@ -313,7 +328,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
-  title: { fontSize: 18, fontWeight: '700' },
+  topBarIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  captionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   timerPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -326,15 +360,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
+    color: '#fff',
   },
   center: { alignItems: 'center', marginTop: 32 },
   avatarStack: {
-    width: 300,
-    height: 300,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  phase: { fontSize: 17, marginTop: 28, fontWeight: '500' },
+  phase: { fontSize: 17, marginTop: 28, fontWeight: '600' },
   transcripts: { flex: 1, paddingHorizontal: 20, marginTop: 16 },
   bubble: { borderRadius: 16, padding: 14, marginBottom: 12, overflow: 'hidden' },
   bubbleRole: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
@@ -347,13 +380,26 @@ const styles = StyleSheet.create({
     gap: 48,
   },
   controlItem: { alignItems: 'center' },
+  shadowBtn: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  shadowBtnEnd: {
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 6,
+  },
   muteBtn: {
     width: 64,
     height: 64,
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   endBtn: {
     width: 64,
@@ -361,7 +407,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  ctrlLabel: { marginTop: 10, fontSize: 13 },
+  ctrlLabel: { marginTop: 10, fontSize: 13, fontWeight: '500' },
 });

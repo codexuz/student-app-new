@@ -191,6 +191,28 @@ export const Colors = {
   dark: darkColors,
 };
 
+// Roadmap gradient pairs — theme-independent (same in light/dark) since
+// they're painted directly on colored cards, not on the page background.
+
+// Rotating fallback gradients for lesson cards until each lesson carries its
+// own `image_url` from the backend — swap the card's background for an
+// <Image source={{ uri: lesson.image_url }}> once that field exists.
+export const ROADMAP_LESSON_GRADIENTS: [string, string][] = [
+  ['#C2410C', '#EA580C'],
+  ['#0F172A', '#334155'],
+  ['#0D5F5A', '#0F766E'],
+  ['#7C2D12', '#B45309'],
+  ['#1E3A8A', '#1D4ED8'],
+];
+
+// Rotating unit colors — red, blue, orange, black — cycling per unit index.
+export const ROADMAP_UNIT_GRADIENTS: [string, string][] = [
+  ['#DC2626', '#991B1B'],
+  ['#2563EB', '#1D4ED8'],
+  ['#EA580C', '#C2410C'],
+  ['#1F2937', '#0B0F19'],
+];
+
 // Export individual color schemes for easier access
 export { darkColors, lightColors };
 
