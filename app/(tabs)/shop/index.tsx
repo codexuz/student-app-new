@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet } from 'react-native';
+import { Dimensions, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Package } from 'lucide-react-native';
@@ -68,13 +68,16 @@ export default function ShopScreen() {
   const border = useColor('border');
   const yellow = useColor('yellow');
   const destructive = useColor('destructive');
+  const primary = useColor('primary');
 
   const [categories, setCategories] = useState<ShopCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [prevActiveCategory, setPrevActiveCategory] = useState(activeCategory);
   const [items, setItems] = useState<ShopItem[] | null>(null);
   const [coins, setCoins] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const [isBuying, setIsBuying] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const confirmSheet = useBottomSheet();
 
   const loadBalance = useCallback(() => {
@@ -82,19 +85,41 @@ export default function ShopScreen() {
     getMyStudentProfile(user.user_id)
       .then((profile) => setCoins(profile?.coins ?? 0))
       .catch(() => setCoins(0));
-  }, [user?.user_id]);
+  }, [user]);
 
   useEffect(() => {
     getShopCategories().catch(() => []).then((data) => setCategories(data ?? []));
     loadBalance();
   }, [loadBalance]);
 
-  useEffect(() => {
+  // Reset the grid to loading synchronously during render when the active
+  // category changes, rather than inside the effect below — avoids both an
+  // extra committed render and the set-state-in-effect lint rule.
+  if (activeCategory !== prevActiveCategory) {
+    setPrevActiveCategory(activeCategory);
     setItems(null);
+  }
+
+  useEffect(() => {
     getShopItems(activeCategory ? { categoryId: activeCategory } : undefined)
       .then(setItems)
       .catch(() => setItems([]));
   }, [activeCategory]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [categoriesData, itemsData] = await Promise.all([
+        getShopCategories().catch(() => []),
+        getShopItems(activeCategory ? { categoryId: activeCategory } : undefined).catch(() => []),
+      ]);
+      setCategories(categoriesData ?? []);
+      setItems(itemsData);
+      loadBalance();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [activeCategory, loadBalance]);
 
   const openConfirm = useCallback(
     (item: ShopItem) => {
@@ -156,7 +181,11 @@ export default function ShopScreen() {
         </ScrollView>
       )}
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.grid}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
+      >
         {items === null ? (
           <View style={styles.gridRow}>
             <Skeleton width={CARD_WIDTH} height={150} variant='rounded' />

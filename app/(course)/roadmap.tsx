@@ -136,7 +136,7 @@ function ZigzagConnector({
   fromAlign: 'left' | 'right';
   toAlign: 'left' | 'right';
 }) {
-  const border = useColor('border');
+  const connectorColor = useColor('textMuted');
   const height = ROW_GAP;
   const halfCard = CARD_WIDTH / 2;
   const startX = fromAlign === 'left' ? halfCard : SCREEN_ROW_WIDTH - halfCard;
@@ -149,7 +149,7 @@ function ZigzagConnector({
       <Svg width={SCREEN_ROW_WIDTH} height={height}>
         <Path
           d={d}
-          stroke={border}
+          stroke={connectorColor}
           strokeWidth={2}
           strokeDasharray='6 7'
           fill='none'
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0.4,
   },
   unitHeroLabel: {
     color: 'rgba(255,255,255,0.8)',
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0.4,
   },
   lessonScrim: {
     ...StyleSheet.absoluteFill,

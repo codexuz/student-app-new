@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import {
   ChevronLeft,
   ChevronRight,
@@ -80,12 +80,24 @@ export default function GradesScreen() {
   const background = useColor('background');
   const border = useColor('border');
   const muted = useColor('textMuted');
+  const primary = useColor('primary');
 
   const [monthDate, setMonthDate] = useState(() => startOfMonth(new Date()));
+  const [prevMonthDate, setPrevMonthDate] = useState(monthDate);
   const [mode, setMode] = useState<Mode>('percent');
   const [data, setData] = useState<GroupGradingsTable | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Flip the loading flag synchronously during render when the month
+  // changes, rather than inside the effect below — React re-renders
+  // immediately with the updated state before painting, so this avoids both
+  // an extra committed render and the set-state-in-effect lint rule.
+  if (monthDate !== prevMonthDate) {
+    setPrevMonthDate(monthDate);
+    setLoading(true);
+  }
 
   const isCurrentMonth = isSameMonth(monthDate, new Date());
 
@@ -100,32 +112,44 @@ export default function GradesScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    const start = formatDateOnly(startOfMonth(monthDate));
+    const end = formatDateOnly(endOfMonth(monthDate));
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-
-      const start = formatDateOnly(startOfMonth(monthDate));
-      const end = formatDateOnly(endOfMonth(monthDate));
-
-      try {
-        const result = await getGroupGradingsTable(start, end);
-        if (!cancelled) setData(result);
-      } catch (err) {
+    getGroupGradingsTable(start, end)
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setError(null);
+      })
+      .catch((err) => {
         if (cancelled) return;
         setData(null);
         setError(err instanceof ApiError ? err.message : 'Failed to load grades.');
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
+      });
 
     return () => {
       cancelled = true;
     };
   }, [monthDate]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    const start = formatDateOnly(startOfMonth(monthDate));
+    const end = formatDateOnly(endOfMonth(monthDate));
+    try {
+      const result = await getGroupGradingsTable(start, end);
+      setData(result);
+      setError(null);
+    } catch (err) {
+      setData(null);
+      setError(err instanceof ApiError ? err.message : 'Failed to load grades.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}>
@@ -150,40 +174,48 @@ export default function GradesScreen() {
         <ModeToggle mode={mode} onChange={setMode} />
       </View>
 
-      {loading ? (
-        <View style={styles.centerFill}>
-          <Spinner size='lg' />
-        </View>
-      ) : error ? (
-        <View style={styles.centerFill}>
-          <Icon name={GraduationCap} size={40} color={muted} />
-          <Text variant='subtitle' style={styles.stateTitle}>
-            No grades to show
-          </Text>
-          <Text variant='caption' style={styles.stateText}>
-            {error}
-          </Text>
-        </View>
-      ) : !data || data.dates.length === 0 || data.students.length === 0 ? (
-        <View style={styles.centerFill}>
-          <Icon name={GraduationCap} size={40} color={muted} />
-          <Text variant='subtitle' style={styles.stateTitle}>
-            No grades yet
-          </Text>
-          <Text variant='caption' style={styles.stateText}>
-            Nothing was graded for your group in {formatMonthLabel(monthDate)}.
-          </Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.tableScrollContent}>
-          <View style={styles.tableRow}>
-            <StudentsColumn students={data.students} border={border} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <DatesTable dates={data.dates} students={data.students} mode={mode} border={border} />
-            </ScrollView>
-          </View>
-        </ScrollView>
-      )}
+      {(() => {
+        const isEmpty = !data || data.dates.length === 0 || data.students.length === 0;
+        const showCentered = loading || !!error || isEmpty;
+
+        return (
+          <ScrollView
+            contentContainerStyle={showCentered ? styles.centerFill : styles.tableScrollContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
+          >
+            {loading ? (
+              <Spinner size='lg' />
+            ) : error ? (
+              <>
+                <Icon name={GraduationCap} size={40} color={muted} />
+                <Text variant='subtitle' style={styles.stateTitle}>
+                  No grades to show
+                </Text>
+                <Text variant='caption' style={styles.stateText}>
+                  {error}
+                </Text>
+              </>
+            ) : isEmpty ? (
+              <>
+                <Icon name={GraduationCap} size={40} color={muted} />
+                <Text variant='subtitle' style={styles.stateTitle}>
+                  No grades yet
+                </Text>
+                <Text variant='caption' style={styles.stateText}>
+                  Nothing was graded for your group in {formatMonthLabel(monthDate)}.
+                </Text>
+              </>
+            ) : (
+              <View style={styles.tableRow}>
+                <StudentsColumn students={data.students} border={border} />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <DatesTable dates={data.dates} students={data.students} mode={mode} border={border} />
+                </ScrollView>
+              </View>
+            )}
+          </ScrollView>
+        );
+      })()}
     </View>
   );
 }
@@ -396,7 +428,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   centerFill: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,

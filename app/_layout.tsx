@@ -114,10 +114,12 @@ function RootNavigator() {
         <Stack.Protected guard={isAuthenticated && !shouldPromptForNotifications}>
           <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
           <Stack.Screen name='(ai-chat)' options={{ headerShown: false }} />
-          <Stack.Screen name='my-recording' options={{ headerShown: true, title: 'My Recordings' }} />
           <Stack.Screen name='edit-profile' options={{ headerShown: true, title: 'Edit Profile' }} />
           <Stack.Screen name='certificates' options={{ headerShown: true, title: 'Certificates' }} />
           <Stack.Screen name='payments' options={{ headerShown: true, title: 'Payment History' }} />
+          <Stack.Screen name='exams' options={{ headerShown: false }} />
+          <Stack.Screen name='student-books' options={{ headerShown: true, title: 'Books' }} />
+          <Stack.Screen name='movies' options={{ headerShown: false }} />
           <Stack.Screen name='(course)' options={{ headerShown: false }} />
           <Stack.Screen name='(shop)' options={{ headerShown: false }} />
         </Stack.Protected>

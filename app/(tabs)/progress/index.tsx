@@ -4,6 +4,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
+  RefreshControl,
   StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -137,20 +138,30 @@ function fetchPeriod(p: Period, limit: number): Promise<LeaderboardRow[]> {
 
 export default function LeaderboardScreen() {
   const insets = useSafeAreaInsets();
+  const green = useColor('green');
   const { user } = useAuth();
   const [period, setPeriod] = useState<Period>('weekly');
+  const [prevPeriod, setPrevPeriod] = useState<Period>(period);
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   // The backend only accepts a growing `limit`, not a cursor/offset — each
   // "load more" refetches from scratch with a bigger limit and replaces rows.
   const limitRef = useRef(PAGE_SIZE);
 
-  useEffect(() => {
+  // Reset paging state synchronously during render when `period` changes,
+  // rather than inside the effect below — React re-renders immediately with
+  // the reset state before painting, so this avoids both an extra committed
+  // render and the set-state-in-effect lint rule.
+  if (period !== prevPeriod) {
+    setPrevPeriod(period);
     setRows(null);
     setHasMore(true);
-    limitRef.current = PAGE_SIZE;
+  }
 
+  useEffect(() => {
+    limitRef.current = PAGE_SIZE;
     fetchPeriod(period, PAGE_SIZE)
       .then((data) => {
         setRows(data);
@@ -180,6 +191,21 @@ export default function LeaderboardScreen() {
         setIsLoadingMore(false);
       });
   }, [period, isLoadingMore, hasMore, rows]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const data = await fetchPeriod(period, PAGE_SIZE);
+      limitRef.current = PAGE_SIZE;
+      setRows(data);
+      setHasMore(data.length >= PAGE_SIZE);
+    } catch {
+      setRows([]);
+      setHasMore(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [period]);
 
   const onScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -243,6 +269,7 @@ export default function LeaderboardScreen() {
         contentContainerStyle={styles.list}
         onScroll={onScroll}
         scrollEventThrottle={100}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={green} />}
       >
         {rows === null ? (
           <View style={styles.centerFill}>

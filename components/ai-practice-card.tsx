@@ -193,8 +193,8 @@ export function buildDefaultAiCards(opts: {
       title: 'Chat with IMPULSE AI',
       description: 'Talk with AI to improve your English skills',
       icon: Bot,
-      colors: ['#FF5F9E', '#E63C6E'],
-      glowColor: '#FF5F9E',
+      colors: ['#f63582', '#c90741'],
+      glowColor: '#f63582',
       onPress: opts.onChatPress,
     },
     {
@@ -203,8 +203,8 @@ export function buildDefaultAiCards(opts: {
       description: 'Have a live phone call with your AI tutor',
       buttonLabel: 'Call',
       icon: Phone,
-      colors: ['#5F8DFF', '#3C63E6'],
-      glowColor: '#5F8DFF',
+      colors: ['#645fff', 'rgb(76, 10, 190)'],
+      glowColor: '#645fff',
       onPress: opts.onCallPress,
     },
   ];
@@ -235,6 +235,7 @@ const styles = StyleSheet.create({
     borderRadius: CARD_RADIUS,
     paddingHorizontal: SPACING.sm,
     overflow: 'hidden',
+    elevation: 0,
   },
   iconBadge: {
     width: 36,

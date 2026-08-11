@@ -5,6 +5,7 @@ import {
   Linking,
   Platform,
   Pressable,
+  RefreshControl,
   Share,
   StyleSheet,
 } from 'react-native';
@@ -101,6 +102,7 @@ export default function ProfileScreen() {
   // whether there's anything to fetch right from the first render — no need
   // to flip it synchronously inside the effect below for the "no id" case.
   const [isLoadingPayment, setIsLoadingPayment] = useState(() => !!user?.user_id);
+  const [refreshing, setRefreshing] = useState(false);
   const signOutSheet = useBottomSheet();
   const photoSheet = useBottomSheet();
   const toast = useToast();
@@ -133,6 +135,18 @@ export default function ProfileScreen() {
       isMounted = false;
     };
   }, [user?.user_id]);
+
+  const onRefresh = async () => {
+    if (!user?.user_id) return;
+    setRefreshing(true);
+    try {
+      setPaymentStatus(await getPaymentStatus(user.user_id));
+    } catch {
+      setPaymentStatus(null);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleUpload = async (file: UploadableImage) => {
     if (!user) return;
@@ -376,6 +390,7 @@ export default function ProfileScreen() {
           styles.content,
           { paddingTop: Platform.OS === 'ios' ? SPACING.lg : 24 },
         ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
@@ -413,7 +428,6 @@ export default function ProfileScreen() {
         {renderPaymentCard()}
 
         <GroupedInput title='Profile Information' titleStyle={{fontSize: 22}}>
-          <MenuRow icon={Mic} label='My Recordings' onPress={() => router.push('/my-recording')} />
           <MenuRow icon={User} label='Edit Profile' onPress={() => router.push('/edit-profile')} />
           <MenuRow icon={Award} label='Certificates' onPress={() => router.push('/certificates')} />
         </GroupedInput>
