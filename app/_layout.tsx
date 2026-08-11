@@ -1,3 +1,4 @@
+import { Text } from '@/components/ui/text';
 import { ToastProvider } from '@/components/ui/toast';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useInAppUpdates } from '@/hooks/useInAppUpdates';
@@ -114,11 +115,57 @@ function RootNavigator() {
         <Stack.Protected guard={isAuthenticated && !shouldPromptForNotifications}>
           <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
           <Stack.Screen name='(ai-chat)' options={{ headerShown: false }} />
-          <Stack.Screen name='edit-profile' options={{ headerShown: true, title: 'Edit Profile' }} />
-          <Stack.Screen name='certificates' options={{ headerShown: true, title: 'Certificates' }} />
-          <Stack.Screen name='payments' options={{ headerShown: true, title: 'Payment History' }} />
+          <Stack.Screen
+            name='edit-profile'
+            options={{
+              headerShown: true,
+              title: 'Edit Profile',
+              headerTitleAlign: 'center',
+              headerShadowVisible: false,
+              headerTitle: () => <Text variant='subtitle'>Edit Profile</Text>,
+            }}
+          />
+          <Stack.Screen
+            name='certificates'
+            options={{
+              headerShown: true,
+              title: 'Certificates',
+              headerTitleAlign: 'center',
+              headerShadowVisible: false,
+              headerTitle: () => <Text variant='subtitle'>Certificates</Text>,
+            }}
+          />
+          <Stack.Screen
+            name='payments'
+            options={{
+              headerShown: true,
+              title: 'Payment History',
+              headerTitleAlign: 'center',
+              headerShadowVisible: false,
+              headerTitle: () => <Text variant='subtitle'>Payment History</Text>,
+            }}
+          />
+          <Stack.Screen
+            name='activity-history'
+            options={{
+              headerShown: true,
+              title: 'Activity History',
+              headerTitleAlign: 'center',
+              headerShadowVisible: false,
+              headerTitle: () => <Text variant='subtitle'>Activity History</Text>,
+            }}
+          />
           <Stack.Screen name='exams' options={{ headerShown: false }} />
-          <Stack.Screen name='student-books' options={{ headerShown: true, title: 'Books' }} />
+          <Stack.Screen
+            name='student-books'
+            options={{
+              headerShown: true,
+              title: 'Books',
+              headerTitleAlign: 'center',
+              headerShadowVisible: false,
+              headerTitle: () => <Text variant='subtitle'>Books</Text>,
+            }}
+          />
           <Stack.Screen name='movies' options={{ headerShown: false }} />
           <Stack.Screen name='(course)' options={{ headerShown: false }} />
           <Stack.Screen name='(shop)' options={{ headerShown: false }} />

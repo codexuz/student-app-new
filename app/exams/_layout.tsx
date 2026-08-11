@@ -1,6 +1,7 @@
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Stack } from 'expo-router';
 
+import { Text } from '@/components/ui/text';
 import { useColor } from '@/hooks/useColor';
 
 export default function ExamsLayout() {
@@ -12,13 +13,24 @@ export default function ExamsLayout() {
       screenOptions={{
         headerShown: true,
         headerTintColor: text,
+        headerTitleAlign: 'center',
+        headerShadowVisible: false,
         headerStyle: {
           backgroundColor: isLiquidGlassAvailable() ? 'transparent' : background,
         },
       }}
     >
-      <Stack.Screen name='index' options={{ title: 'Exams' }} />
-      <Stack.Screen name='[id]' options={{ title: 'Exam Result' }} />
+      <Stack.Screen
+        name='index'
+        options={{ title: 'Exams', headerTitle: () => <Text variant='subtitle'>Exams</Text> }}
+      />
+      <Stack.Screen
+        name='[id]'
+        options={{
+          title: 'Exam Result',
+          headerTitle: () => <Text variant='subtitle'>Exam Result</Text>,
+        }}
+      />
     </Stack>
   );
 }

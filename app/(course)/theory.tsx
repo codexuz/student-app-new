@@ -1,22 +1,57 @@
-import { useEffect, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, StyleSheet } from 'react-native';
+import { Directory, File, Paths } from 'expo-file-system';
 import { useLocalSearchParams } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import Markdown from 'react-native-markdown-display';
 import { WebView } from 'react-native-webview';
-import { Download } from 'lucide-react-native';
+import { Download, FileSpreadsheet, FileText, Paperclip, Share2, StickyNote } from 'lucide-react-native';
+import type { LucideProps } from 'lucide-react-native';
 
-import { AudioPlayer } from '@/components/ui/audio-player';
-import { Card } from '@/components/ui/card';
+import { AudioHeroPlayer } from '@/components/lesson/audio-hero-player';
+import { VideoHeroPlayer } from '@/components/lesson/video-hero-player';
 import { Icon } from '@/components/ui/icon';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
+import { useToast } from '@/components/ui/toast';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { ApiError } from '@/lib/api/client';
-import type { LessonContentBlock, LessonContentItem } from '@/lib/api/curriculum-types';
+import type { LessonContentBlock, LessonContentItem, LessonContentResource } from '@/lib/api/curriculum-types';
 import { getLessonFull } from '@/lib/api/lessons';
+import { withOpacity } from '@/theme/colors';
 import { SPACING } from '@/theme/globals';
+
+function fileNameFromUrl(url: string): string {
+  try {
+    const clean = url.split('?')[0].split('#')[0];
+    const last = decodeURIComponent(clean.substring(clean.lastIndexOf('/') + 1));
+    return last || 'Attachment';
+  } catch {
+    return 'Attachment';
+  }
+}
+
+const RESOURCE_META: Record<
+  LessonContentResource['type'],
+  { color: string; label: string; icon: React.ComponentType<LucideProps>; mimeType: string }
+> = {
+  pdf: { color: '#DC2626', label: 'PDF', icon: FileText, mimeType: 'application/pdf' },
+  doc: { color: '#2563EB', label: 'DOC', icon: FileText, mimeType: 'application/msword' },
+  docx: {
+    color: '#2563EB',
+    label: 'DOCX',
+    icon: FileText,
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  },
+  excel: { color: '#16A34A', label: 'XLS', icon: FileSpreadsheet, mimeType: 'application/vnd.ms-excel' },
+};
+
+// Attachments are cached once under the app's own document directory (safe from
+// the OS clearing it under storage pressure) so re-opening the same resource
+// never re-downloads it — only the first tap hits the network.
+const ATTACHMENTS_DIR = new Directory(Paths.document, 'lesson-attachments');
 
 function extractYouTubeId(url: string): string | null {
   const match = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/.exec(url);
@@ -53,14 +88,14 @@ function ContentBlockView({ block }: { block: LessonContentBlock }) {
   switch (block.type) {
     case 'text':
       return (
-        <Markdown style={{ body: { color: text, fontSize: 15, lineHeight: 22 } }}>
+        <Markdown style={{ body: { color: text, fontSize: 15, lineHeight: 40 } }}>
           {block.content}
         </Markdown>
       );
     case 'image':
       return <Image source={{ uri: block.content }} style={styles.image} resizeMode='contain' />;
     case 'audio':
-      return <AudioPlayer url={block.content} />;
+      return <AudioHeroPlayer url={block.content} />;
     case 'video':
     case 'youtube_embed':
     case 'iframe':
@@ -70,36 +105,170 @@ function ContentBlockView({ block }: { block: LessonContentBlock }) {
   }
 }
 
-function TheorySection({ item }: { item: LessonContentItem }) {
+function TabSegment({
+  label,
+  icon,
+  active,
+  onPress,
+}: {
+  label: string;
+  icon: React.ComponentType<LucideProps>;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const card = useColor('card');
   const primary = useColor('primary');
+  const muted = useColor('textMuted');
 
   return (
-    <Card style={styles.section}>
-      <Text variant='title'>{item.title}</Text>
-      {item.content.map((block) => (
-        <ContentBlockView key={block.id} block={block} />
-      ))}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tabSegment,
+        active && [styles.tabSegmentActive, { backgroundColor: card }],
+        pressed && { opacity: 0.75 },
+      ]}
+    >
+      <Icon name={icon} size={15} color={active ? primary : muted} />
+      <Text
+        style={[styles.tabSegmentText, { color: active ? primary : muted, fontWeight: active ? '700' : '600' }]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
-      {!!item.resources?.length && (
-        <View style={styles.resources}>
-          <Text variant='caption' style={{ fontWeight: '600' }}>
-            Resources
-          </Text>
-          {item.resources.map((resource) => (
-            <Pressable
-              key={resource.id}
-              onPress={() => Linking.openURL(resource.url)}
-              style={styles.resourceRow}
-            >
-              <Icon name={Download} size={16} color={primary} />
-              <Text variant='caption' style={{ color: primary }}>
-                {resource.type.toUpperCase()} attachment
-              </Text>
-            </Pressable>
+function TabSegmentedControl({
+  tab,
+  onChange,
+}: {
+  tab: 'notes' | 'attachment';
+  onChange: (tab: 'notes' | 'attachment') => void;
+}) {
+  const track = useColor('secondary');
+
+  return (
+    <View style={[styles.tabTrack, { backgroundColor: track }]}>
+      <TabSegment label='Notes' icon={StickyNote} active={tab === 'notes'} onPress={() => onChange('notes')} />
+      <TabSegment
+        label='Attachment'
+        icon={Paperclip}
+        active={tab === 'attachment'}
+        onPress={() => onChange('attachment')}
+      />
+    </View>
+  );
+}
+
+function AttachmentRow({ resource }: { resource: LessonContentResource }) {
+  const card = useColor('card');
+  const text = useColor('text');
+  const { toast } = useToast();
+  const meta = RESOURCE_META[resource.type];
+  const name = fileNameFromUrl(resource.url);
+
+  // Namespaced by resource id so two attachments that happen to share a
+  // filename (e.g. two lessons' "worksheet.pdf") don't collide on disk.
+  const localFile = useMemo(() => new File(ATTACHMENTS_DIR, `${resource.id}-${name}`), [resource.id, name]);
+  const [isSaved, setIsSaved] = useState(() => localFile.exists);
+  const [isBusy, setIsBusy] = useState(false);
+
+  const handlePress = async () => {
+    if (isBusy) return;
+    setIsBusy(true);
+    try {
+      if (!localFile.exists) {
+        if (!ATTACHMENTS_DIR.exists) {
+          ATTACHMENTS_DIR.create({ intermediates: true });
+        }
+        await File.downloadFileAsync(resource.url, localFile, { idempotent: true });
+        setIsSaved(true);
+      }
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(localFile.uri, { mimeType: meta.mimeType, dialogTitle: name });
+      } else {
+        toast({ variant: 'success', title: 'Saved', description: `${name} saved on this device.` });
+      }
+    } catch {
+      toast({ variant: 'error', title: 'Error', description: `Couldn't save ${name}. Try again.` });
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      disabled={isBusy}
+      style={({ pressed }) => [styles.attachmentRow, { backgroundColor: card }, pressed && { opacity: 0.7 }]}
+    >
+      <View style={[styles.attachmentIcon, { backgroundColor: withOpacity(meta.color, 0.12) }]}>
+        <Icon name={meta.icon} size={20} color={meta.color} />
+        <View style={[styles.attachmentBadge, { backgroundColor: meta.color, borderColor: card }]}>
+          <Text style={styles.attachmentBadgeText}>{meta.label}</Text>
+        </View>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.attachmentName, { color: text }]} numberOfLines={1}>
+          {name}
+        </Text>
+        <Text variant='caption' style={{ color: meta.color, fontWeight: '600' }}>
+          {isSaved ? 'Saved · tap to share' : `${meta.label} document`}
+        </Text>
+      </View>
+      <View style={[styles.attachmentDownload, { backgroundColor: withOpacity(meta.color, 0.12) }]}>
+        {isBusy ? (
+          <ActivityIndicator size='small' color={meta.color} />
+        ) : (
+          <Icon name={isSaved ? Share2 : Download} size={16} color={meta.color} />
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+function TheorySection({ item }: { item: LessonContentItem }) {
+  const heroBlock =
+    item.content.find((b) => b.type === 'video') ?? item.content.find((b) => b.type === 'audio');
+  const restBlocks = item.content.filter((b) => b !== heroBlock);
+  const hasNotes = restBlocks.length > 0;
+  const hasAttachments = !!item.resources?.length;
+  const showTabs = hasNotes && hasAttachments;
+
+  const [tab, setTab] = useState<'notes' | 'attachment'>(hasNotes ? 'notes' : 'attachment');
+  const showNotes = hasNotes && (!showTabs || tab === 'notes');
+  const showAttachments = hasAttachments && (!showTabs || tab === 'attachment');
+
+  return (
+    <View style={styles.section}>
+      {(!heroBlock || heroBlock.type === 'audio') && <Text variant='title'>{item.title}</Text>}
+
+      {heroBlock?.type === 'video' && <VideoHeroPlayer title={item.title} url={heroBlock.content} />}
+      {heroBlock?.type === 'audio' && <AudioHeroPlayer url={heroBlock.content} />}
+
+      {showTabs && <TabSegmentedControl tab={tab} onChange={setTab} />}
+
+      {showNotes && (
+        <View style={styles.notesBlock}>
+          {restBlocks.map((block) => (
+            <ContentBlockView key={block.id} block={block} />
           ))}
         </View>
       )}
-    </Card>
+
+      {showAttachments && (
+        <View style={styles.attachmentBlock}>
+          <Text variant='caption' style={styles.attachmentHeading}>
+            Attachment File
+          </Text>
+          {item.resources!.map((resource) => (
+            <AttachmentRow key={resource.id} resource={resource} />
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -156,7 +325,7 @@ export default function TheoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    gap: SPACING.md,
+    gap: SPACING.xl,
     padding: SPACING.lg,
   },
   centerFill: {
@@ -166,7 +335,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
   },
   section: {
-    gap: SPACING.sm,
+    gap: SPACING.md,
   },
   embed: {
     width: '100%',
@@ -179,13 +348,90 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: SPACING.xs,
   },
-  resources: {
-    gap: SPACING.xs,
-    marginTop: SPACING.xs,
+
+  // Tabs — a segmented control: one rounded track, active segment raised on
+  // its own card-colored chip with a soft shadow (rather than two loose,
+  // independently-outlined pills).
+  tabTrack: {
+    flexDirection: 'row',
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
   },
-  resourceRow: {
+  tabSegment: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  tabSegmentActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 0.5,
+  },
+  tabSegmentText: {
+    fontSize: 13.5,
+  },
+
+  notesBlock: {
+    gap: SPACING.md,
+  },
+
+  // Attachment list
+  attachmentBlock: {
+    gap: SPACING.sm,
+  },
+  attachmentHeading: {
+    fontWeight: '600',
+  },
+  attachmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    padding: 10,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 0.8,
+  },
+  attachmentIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -6,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 5,
+    borderWidth: 1.5,
+  },
+  attachmentBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+  attachmentName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  attachmentDownload: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

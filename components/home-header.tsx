@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Image, Pressable, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import LottieView, { type AnimationObject } from 'lottie-react-native';
 
 import { StreakCalendarSheet } from '@/components/streak-calendar-sheet';
@@ -51,12 +52,12 @@ function StreakChip({ value, onPress }: { value: number; onPress: () => void }) 
   );
 }
 
-function CoinsChip({ value }: { value: number }) {
+function CoinsChip({ value, onPress }: { value: number; onPress: () => void }) {
   const card = useColor('card');
   const foreground = useColor('foreground');
 
   return (
-    <View style={[styles.chip, { backgroundColor: card }]}>
+    <Pressable style={[styles.chip, { backgroundColor: card }]} onPress={onPress}>
       <AutoPlayLottie
         source={require('@/assets/animations/coin.json')}
         style={styles.coinLottie}
@@ -65,7 +66,7 @@ function CoinsChip({ value }: { value: number }) {
       <Text variant='body' style={[styles.chipText, { color: foreground }]}>
         {formatAmount(value)}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -109,7 +110,7 @@ export function HomeHeader({ firstName, avatarUrl, streak, coins }: HomeHeaderPr
 
       <View style={styles.stats}>
         <StreakChip value={streak} onPress={streakSheet.open} />
-        <CoinsChip value={coins} />
+        <CoinsChip value={coins} onPress={() => router.push('/activity-history')} />
       </View>
 
       <StreakCalendarSheet
