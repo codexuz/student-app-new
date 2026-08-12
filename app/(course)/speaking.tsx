@@ -8,10 +8,14 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
-import { Mic, Square } from 'lucide-react-native';
+import { Lightbulb } from 'lucide-react-native';
+import LottieView from 'lottie-react-native';
 
-import { AudioPlayer } from '@/components/ui/audio-player';
-import { Button } from '@/components/ui/button';
+import { DuoButton } from '@/components/lesson/duo-button';
+import { MicButton } from '@/components/lesson/mic-button';
+import { PhraseCard } from '@/components/lesson/phrase-card';
+import { LessonProgressBar } from '@/components/lesson/progress-bar';
+import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
@@ -19,6 +23,8 @@ import { Text } from '@/components/ui/text';
 import { useToast } from '@/components/ui/toast';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
+import { useHaptics } from '@/hooks/useHaptics';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { ApiError } from '@/lib/api/client';
 import type { IeltsPart1Question } from '@/lib/api/curriculum-types';
 import { transcribeAudio, uploadFile } from '@/lib/api/media';
@@ -36,10 +42,12 @@ export default function SpeakingQAScreen() {
   const { speakingId, lessonId } = useLocalSearchParams<{ speakingId: string; lessonId: string }>();
   const toast = useToast();
   const { user } = useAuth();
+  const feedback = useHaptics(true);
+  const playFinishSound = useSoundEffect(require('@/assets/sounds/game_end.mp3'));
   const primary = useColor('primary');
-  const primaryForeground = useColor('primaryForeground');
-  const red = useColor('red');
+  const orange = useColor('orange');
   const muted = useColor('textMuted');
+  const mutedBg = useColor('muted');
 
   const [questions, setQuestions] = useState<IeltsPart1Question[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +55,7 @@ export default function SpeakingQAScreen() {
   const [responses, setResponses] = useState<Record<number, QuestionResponse>>({});
   const [processing, setProcessing] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [hintIndex, setHintIndex] = useState<number | null>(null);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
@@ -74,11 +83,20 @@ export default function SpeakingQAScreen() {
     };
   }, [speakingId]);
 
+  useEffect(() => {
+    if (finished) playFinishSound();
+    // Only once, when the summary screen first appears.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
+
   const currentQuestion = questions?.[currentIndex];
   const currentResponse = responses[currentIndex];
   const isLast = questions ? currentIndex === questions.length - 1 : false;
+  const progress = questions && questions.length > 0 ? (currentIndex + (currentResponse ? 1 : 0)) / questions.length : 0;
+  const showHint = hintIndex === currentIndex;
 
   const startRecording = async () => {
+    feedback('impact-light');
     await recorder.prepareToRecordAsync();
     recorder.record();
   };
@@ -96,6 +114,7 @@ export default function SpeakingQAScreen() {
         ...prev,
         [currentIndex]: { question: currentQuestion.question, transcription: text, audioUrl: url },
       }));
+      feedback('selection');
     } catch {
       toast.error('Something went wrong', 'Could not process your recording. Please try again.');
     } finally {
@@ -115,6 +134,7 @@ export default function SpeakingQAScreen() {
       const allResponses = Object.values(responses);
       await submitSpeakingResponse({
         speaking_id: speakingId,
+        student_id: user.user_id,
         response_type: 'part1',
         audio_url: allResponses.map((r) => r.audioUrl),
         transcription: allResponses.map((r) => r.transcription).join('\n\n'),
@@ -149,27 +169,34 @@ export default function SpeakingQAScreen() {
   if (finished) {
     return (
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-        <Text variant='heading'>Nice work!</Text>
-        <Text variant='caption'>Here&apos;s what you said:</Text>
+        <View style={styles.hero}>
+          <LottieView source={require('@/assets/animations/gift.json')} autoPlay loop={false} style={styles.lottie} />
+        </View>
+        <Text variant='heading' style={{ textAlign: 'center' }}>
+          Nice work!
+        </Text>
+        <Text variant='caption' style={{ textAlign: 'center', color: muted }}>
+          Here&apos;s what you said:
+        </Text>
 
         {Object.values(responses).map((response, index) => (
-          <View key={index} style={styles.summaryItem}>
-            <Text variant='body' style={{ fontWeight: '600' }}>
+          <Card key={index} style={styles.summaryItem}>
+            <Text variant='body' style={{ fontWeight: '700' }}>
               {response.question}
             </Text>
             <Text variant='caption' style={{ color: muted }}>
               {response.transcription}
             </Text>
-          </View>
+          </Card>
         ))}
 
-        <Button
-          size='lg'
-          style={{ width: '100%', marginTop: SPACING.lg }}
+        <DuoButton
+          color={primary}
           onPress={() => router.dismissTo({ pathname: '/lesson', params: { lessonId } })}
+          style={{ marginTop: SPACING.lg }}
         >
           Done
-        </Button>
+        </DuoButton>
       </ScrollView>
     );
   }
@@ -178,55 +205,79 @@ export default function SpeakingQAScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+      <LessonProgressBar progress={progress} />
+
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-        <Text variant='caption' style={{ color: muted }}>
-          Question {currentIndex + 1} of {questions.length}
-        </Text>
-        <Text variant='title'>{currentQuestion.question}</Text>
+        <PhraseCard
+          key={currentQuestion.id}
+          phrase={currentQuestion.question}
+          audioUrl={currentQuestion.audio_url}
+          current={currentIndex + 1}
+          total={questions.length}
+          autoPlay
+        />
 
-        {!!currentQuestion.audio_url && <AudioPlayer url={currentQuestion.audio_url} />}
+        {showHint && !!currentQuestion.sample_answer && (
+          <Card style={{ ...styles.hintCard, borderColor: orange }}>
+            <View style={styles.hintHeader}>
+              <Icon name={Lightbulb} size={16} color={orange} />
+              <Text variant='caption' style={{ fontWeight: '700', color: orange }}>
+                Idea
+              </Text>
+            </View>
+            <Text variant='body'>{currentQuestion.sample_answer}</Text>
+          </Card>
+        )}
 
-        <View style={styles.recordArea}>
-          <Pressable
-            onPress={recorderState.isRecording ? stopRecording : startRecording}
-            disabled={processing}
-            style={[
-              styles.recordButton,
-              { backgroundColor: recorderState.isRecording ? red : primary },
-            ]}
-          >
-            <Icon name={recorderState.isRecording ? Square : Mic} size={28} color={primaryForeground} />
-          </Pressable>
-          <Text variant='caption' style={{ color: muted }}>
-            {processing
-              ? 'Processing…'
-              : recorderState.isRecording
-                ? 'Tap to stop'
-                : currentResponse
-                  ? 'Tap to re-record'
-                  : 'Tap to record your answer'}
-          </Text>
-        </View>
+        {!currentResponse && (
+          <View style={styles.recordArea}>
+            <MicButton
+              isRecording={recorderState.isRecording}
+              processing={processing}
+              disabled={processing}
+              onPress={recorderState.isRecording ? stopRecording : startRecording}
+            />
+            <Text variant='caption' style={{ color: muted, textAlign: 'center' }}>
+              {processing ? 'Processing…' : recorderState.isRecording ? 'Tap to stop' : 'Tap to record your answer'}
+            </Text>
+          </View>
+        )}
 
         {!!currentResponse && (
-          <View style={styles.transcript}>
-            <Text variant='caption' style={{ fontWeight: '600' }}>
+          <Card style={styles.transcript}>
+            <Text variant='caption' style={{ fontWeight: '700' }}>
               Your response
             </Text>
             <Text variant='body'>{currentResponse.transcription}</Text>
-          </View>
+          </Card>
         )}
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button
-          size='lg'
-          style={{ width: '100%' }}
-          onPress={handleNext}
-          disabled={!currentResponse || processing}
-        >
-          {isLast ? 'Complete Exercise' : 'Next Question'}
-        </Button>
+        <View style={styles.footerRow}>
+          {!!currentQuestion.sample_answer && (
+            <Pressable
+              onPress={() => setHintIndex((prev) => (prev === currentIndex ? null : currentIndex))}
+              style={[
+                styles.ideaButton,
+                { borderColor: orange, backgroundColor: showHint ? `${orange}1A` : 'transparent' },
+              ]}
+              hitSlop={8}
+              accessibilityRole='button'
+              accessibilityLabel='Show an idea for this answer'
+            >
+              <Icon name={Lightbulb} size={22} color={orange} />
+            </Pressable>
+          )}
+          <DuoButton
+            color={!currentResponse || processing ? mutedBg : primary}
+            onPress={handleNext}
+            disabled={!currentResponse || processing}
+            style={{ flex: 1 }}
+          >
+            {processing ? 'Submitting…' : isLast ? 'Complete Exercise' : 'Next Question'}
+          </DuoButton>
+        </View>
       </View>
     </View>
   );
@@ -244,17 +295,30 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     padding: SPACING.lg,
   },
+  hero: {
+    width: 160,
+    height: 160,
+    alignSelf: 'center',
+  },
+  lottie: {
+    width: 160,
+    height: 160,
+  },
   recordArea: {
     alignItems: 'center',
     gap: SPACING.sm,
     paddingVertical: SPACING.lg,
   },
-  recordButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  hintCard: {
+    gap: SPACING.xs,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    elevation: 0,
+  },
+  hintHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
   },
   transcript: {
     gap: SPACING.xs,
@@ -264,6 +328,18 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: SPACING.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  ideaButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

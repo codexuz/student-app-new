@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Pause, Play } from 'lucide-react-native';
@@ -20,12 +21,27 @@ function formatTime(seconds: number): string {
  * player. Mount a fresh instance per clip (e.g. keyed by question id) rather
  * than swapping `url` on a shared instance — simpler than tracking `replace()`.
  */
-export function AudioPlayer({ url, compact = false }: { url: string; compact?: boolean }) {
+export function AudioPlayer({
+  url,
+  compact = false,
+  autoPlay = false,
+}: {
+  url: string;
+  compact?: boolean;
+  autoPlay?: boolean;
+}) {
   const player = useAudioPlayer(url);
   const status = useAudioPlayerStatus(player);
   const primary = useColor('primary');
   const primaryForeground = useColor('primaryForeground');
   const muted = useColor('textMuted');
+
+  useEffect(() => {
+    if (autoPlay) player.play();
+    // Fire once per mount (a fresh player per clip, per the note above) — not
+    // on every `player`/`autoPlay` identity change, which would replay on rerender.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggle = () => {
     if (status.playing) {

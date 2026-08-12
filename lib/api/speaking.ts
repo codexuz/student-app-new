@@ -28,6 +28,8 @@ export async function getPronunciationPhrases(speakingId: string): Promise<Pronu
 
 export interface SubmitSpeakingResponseInput {
   speaking_id: string;
+  /** Required by the backend DTO (`@IsUUID()`, not optional) — the student's own id. */
+  student_id: string;
   response_type: SpeakingResponseType;
   audio_url?: string[];
   transcription?: string;

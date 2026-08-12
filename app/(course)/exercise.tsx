@@ -18,6 +18,7 @@ import { submitHomeworkSection } from '@/lib/api/homework';
 import { SPACING } from '@/theme/globals';
 import { emptyAnswerFor, gradeQuestion, isAnswerComplete } from '@/components/exercise/grading';
 import { QuestionRenderer } from '@/components/exercise/question-renderer';
+import { ReadingPassage } from '@/components/exercise/reading-passage';
 import type { QuestionAnswerValue } from '@/components/exercise/answer-types';
 
 interface FinishedState {
@@ -192,6 +193,9 @@ export default function ExerciseRunnerScreen() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
         {!!exercise.audio_url && <AudioHeroPlayer key={exercise.id} url={exercise.audio_url} />}
+        {exercise.exercise_type === 'reading' && !!exercise.content && (
+          <ReadingPassage title={exercise.title} content={exercise.content} />
+        )}
 
         <Text variant='caption' style={{ color: muted }}>
           Question {currentIndex + 1} of {questions.length}

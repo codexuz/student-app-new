@@ -94,6 +94,31 @@ export interface LessonContentItem {
   lessonId: string;
 }
 
+/** The OpenAI-graded breakdown attached to a writing section's `answers.assessment` once checked (see `openai.service.ts`'s `writingResponseFormat`). */
+export interface WritingAssessment {
+  score: number;
+  grammarScore: number;
+  vocabularyScore: number;
+  coherenceScore: number;
+  taskResponseScore: number;
+  grammarFeedback: string;
+  vocabularyFeedback: string;
+  coherenceFeedback: string;
+  taskResponseFeedback: string;
+  overallFeedback: string;
+  correctedText: string;
+}
+
+export interface ExerciseSubmissionSummary {
+  id: string;
+  exercise_id: string;
+  score: number | null;
+  section: string;
+  /** For writing, carries `{ writing: string, assessment?: WritingAssessment }` once graded. */
+  answers: Record<string, unknown> | null;
+  completed: boolean;
+}
+
 export interface ExerciseSummary {
   id: string;
   title: string;
@@ -103,6 +128,8 @@ export interface ExerciseSummary {
   score?: number;
   /** The list endpoint eager-loads full question data (same shape as `Exercise.questions`). */
   questions?: Question[];
+  /** The raw submission record — needed to show full past results (e.g. writing feedback), not just the score. */
+  submission?: ExerciseSubmissionSummary | null;
 }
 
 export interface SpeakingTask {

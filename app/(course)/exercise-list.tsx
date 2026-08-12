@@ -292,7 +292,16 @@ export default function ExerciseListScreen() {
 
   const openExercise = (exercise: ExerciseSummary) => {
     if (type === 'writing') {
-      router.push({ pathname: '/writing', params: { exerciseId: exercise.id, lessonId } });
+      router.push({
+        pathname: '/writing',
+        params: {
+          exerciseId: exercise.id,
+          lessonId,
+          // A completed writing exercise already carries its graded submission —
+          // pass it along so the screen can show the result instead of an empty composer.
+          ...(exercise.submission ? { submission: JSON.stringify(exercise.submission) } : {}),
+        },
+      });
     } else {
       router.push({ pathname: '/exercise', params: { exerciseId: exercise.id, lessonId } });
     }
@@ -311,7 +320,15 @@ export default function ExerciseListScreen() {
           <ExerciseCard
             key={exercise.id}
             exercise={exercise}
-            onPress={() => (exercise.isCompleted ? setRetakeTarget(exercise) : openExercise(exercise))}
+            onPress={() => {
+              // Writing has its own graded-result screen — no need to confirm before
+              // showing it, unlike retaking an auto-scored quiz.
+              if (exercise.isCompleted && type !== 'writing') {
+                setRetakeTarget(exercise);
+              } else {
+                openExercise(exercise);
+              }
+            }}
           />
         ))}
       </ScrollView>

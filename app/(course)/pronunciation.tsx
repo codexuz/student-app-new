@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   RecordingPresets,
@@ -8,23 +8,31 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
-import { Mic, Square } from 'lucide-react-native';
 
-import { AudioPlayer } from '@/components/ui/audio-player';
-import { Button } from '@/components/ui/button';
-import { CircularProgress } from '@/components/ui/circular-progress';
-import { Icon } from '@/components/ui/icon';
+import { FeedbackBanner, type FeedbackTier } from '@/components/lesson/feedback-banner';
+import { MicButton } from '@/components/lesson/mic-button';
+import { PhraseCard } from '@/components/lesson/phrase-card';
+import { LessonProgressBar } from '@/components/lesson/progress-bar';
+import { Result } from '@/components/lesson/result';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { useToast } from '@/components/ui/toast';
 import { View } from '@/components/ui/view';
-import { useColor } from '@/hooks/useColor';
+import { useHaptics } from '@/hooks/useHaptics';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { ApiError } from '@/lib/api/client';
 import type { PronunciationPhrase } from '@/lib/api/curriculum-types';
 import { transcribeAudio } from '@/lib/api/media';
 import { getPronunciationPhrases, submitSpeakingResponse } from '@/lib/api/speaking';
+import { useAuth } from '@/providers/auth-provider';
 import { SPACING } from '@/theme/globals';
+
+interface FinishedState {
+  percentage: number;
+  passedCount: number;
+  totalCount: number;
+}
 
 function normalize(text: string): string {
   return text
@@ -49,23 +57,34 @@ function scoreSimilarity(spokenText: string, targetPhrase: string): number {
   return Math.round((matched / targetWords.length) * 100);
 }
 
+function tierFor(score: number): FeedbackTier {
+  if (score >= 80) return 'great';
+  if (score >= 60) return 'good';
+  return 'retry';
+}
+
+const TIER_COPY: Record<FeedbackTier, string> = {
+  great: 'Excellent!',
+  good: 'Good job!',
+  retry: "Let's try that again",
+};
+
 export default function PronunciationDrillScreen() {
   const { speakingId, lessonId } = useLocalSearchParams<{ speakingId: string; lessonId: string }>();
   const toast = useToast();
-  const primary = useColor('primary');
-  const primaryForeground = useColor('primaryForeground');
-  const red = useColor('red');
-  const green = useColor('green');
-  const orange = useColor('orange');
-  const muted = useColor('textMuted');
+  const { user } = useAuth();
+  const feedback = useHaptics(true);
+  const playCorrect = useSoundEffect(require('@/assets/sounds/pronunciation_correct.mp3'));
+  const playIncorrect = useSoundEffect(require('@/assets/sounds/pronunciation_incorrect.mp3'));
 
   const [phrases, setPhrases] = useState<PronunciationPhrase[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [scores, setScores] = useState<number[]>([]);
   const [currentScore, setCurrentScore] = useState<number | null>(null);
+  const [transcript, setTranscript] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [finished, setFinished] = useState(false);
+  const [finished, setFinished] = useState<FinishedState | null>(null);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
@@ -95,10 +114,11 @@ export default function PronunciationDrillScreen() {
 
   const currentPhrase = phrases?.[currentIndex];
   const isLast = phrases ? currentIndex === phrases.length - 1 : false;
-  const scoreColor = currentScore == null ? primary : currentScore >= 80 ? green : currentScore >= 60 ? orange : red;
+  const progress = phrases && phrases.length > 0 ? (currentIndex + (currentScore != null ? 1 : 0)) / phrases.length : 0;
 
   const startRecording = async () => {
     setCurrentScore(null);
+    setTranscript(null);
     await recorder.prepareToRecordAsync();
     recorder.record();
   };
@@ -111,12 +131,22 @@ export default function PronunciationDrillScreen() {
     setProcessing(true);
     try {
       const { text } = await transcribeAudio({ uri, name: 'phrase.m4a', type: 'audio/m4a' });
-      setCurrentScore(scoreSimilarity(text, currentPhrase.word_to_pronunce));
+      const score = scoreSimilarity(text, currentPhrase.word_to_pronunce);
+      setCurrentScore(score);
+      setTranscript(text);
+      feedback(score >= 60 ? 'success' : 'warning');
+      if (score >= 60) playCorrect();
+      else playIncorrect();
     } catch {
       toast.error('Something went wrong', 'Could not process your recording. Please try again.');
     } finally {
       setProcessing(false);
     }
+  };
+
+  const retry = () => {
+    setCurrentScore(null);
+    setTranscript(null);
   };
 
   const advance = async () => {
@@ -130,20 +160,27 @@ export default function PronunciationDrillScreen() {
       return;
     }
 
+    if (!user?.user_id) return;
+
     const average = Math.round(nextScores.reduce((sum, s) => sum + s, 0) / nextScores.length);
     setProcessing(true);
     try {
       await submitSpeakingResponse({
         speaking_id: speakingId,
+        student_id: user.user_id,
         response_type: 'pronunciation',
         pronunciation_score: average,
       });
-    } catch {
-      // Best-effort — the student still gets their locally-computed score below.
+      setScores(nextScores);
+      setFinished({
+        percentage: average,
+        passedCount: nextScores.filter((s) => s >= 60).length,
+        totalCount: nextScores.length,
+      });
+    } catch (err) {
+      toast.error('Submission failed', err instanceof ApiError ? err.message : 'Please try again.');
     } finally {
       setProcessing(false);
-      setScores(nextScores);
-      setFinished(true);
     }
   };
 
@@ -166,67 +203,60 @@ export default function PronunciationDrillScreen() {
   }
 
   if (finished) {
-    const average = Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
     return (
-      <View style={styles.centerFill}>
-        <CircularProgress percentage={average} size={100} strokeWidth={8} color={scoreColor} />
-        <Text variant='caption' style={{ marginTop: SPACING.md, textAlign: 'center' }}>
-          Estimated pronunciation score across {scores.length} phrase{scores.length === 1 ? '' : 's'}
-        </Text>
-        <Button
-          size='lg'
-          style={{ width: '100%', marginTop: SPACING.lg }}
-          onPress={() => router.dismissTo({ pathname: '/lesson', params: { lessonId } })}
-        >
-          Done
-        </Button>
-      </View>
+      <Result
+        percentage={finished.percentage}
+        correctCount={finished.passedCount}
+        totalQuestions={finished.totalCount}
+        rewards={null}
+        onContinue={() => router.dismissTo({ pathname: '/lesson', params: { lessonId } })}
+        continueLabel='Done'
+      />
     );
   }
 
   if (!currentPhrase) return null;
 
+  const tier = currentScore != null ? tierFor(currentScore) : null;
+
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-        <Text variant='caption' style={{ color: muted }}>
-          Phrase {currentIndex + 1} of {phrases.length}
-        </Text>
-        <Text variant='title'>{currentPhrase.word_to_pronunce}</Text>
+      <LessonProgressBar progress={progress} />
 
-        {!!currentPhrase.audio_url && <AudioPlayer url={currentPhrase.audio_url} />}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        <PhraseCard
+          phrase={currentPhrase.word_to_pronunce}
+          audioUrl={currentPhrase.audio_url}
+          current={currentIndex + 1}
+          total={phrases.length}
+        />
 
         <View style={styles.recordArea}>
-          <Pressable
+          <MicButton
+            isRecording={recorderState.isRecording}
+            processing={processing}
+            disabled={processing}
             onPressIn={startRecording}
             onPressOut={stopRecording}
-            disabled={processing}
-            style={[styles.recordButton, { backgroundColor: recorderState.isRecording ? red : primary }]}
-          >
-            <Icon name={recorderState.isRecording ? Square : Mic} size={28} color={primaryForeground} />
-          </Pressable>
-          <Text variant='caption' style={{ color: muted }}>
-            {processing ? 'Processing…' : 'Press and hold to record'}
+          />
+          <Text variant='caption' style={{ textAlign: 'center' }}>
+            {processing ? 'Processing…' : recorderState.isRecording ? 'Recording…' : 'Press and hold to record'}
           </Text>
         </View>
-
-        {currentScore != null && (
-          <View style={styles.scoreArea}>
-            <CircularProgress percentage={currentScore} size={80} strokeWidth={6} color={scoreColor} />
-            {currentScore < 60 && (
-              <Text variant='caption' style={{ color: muted, textAlign: 'center' }}>
-                Give it another try
-              </Text>
-            )}
-          </View>
-        )}
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Button size='lg' style={{ width: '100%' }} onPress={advance} disabled={currentScore == null || processing}>
-          {isLast ? 'Finish' : 'Next'}
-        </Button>
-      </View>
+      {currentScore != null && tier && (
+        <FeedbackBanner
+          tier={tier}
+          title={TIER_COPY[tier]}
+          subtitle={`Pronunciation score: ${currentScore}%`}
+          transcript={tier === 'retry' ? (transcript ?? undefined) : undefined}
+          primaryLabel={processing ? 'Submitting…' : isLast ? 'Finish' : 'Next'}
+          primaryDisabled={processing}
+          onPrimary={advance}
+          onRetry={tier === 'retry' ? retry : undefined}
+        />
+      )}
     </View>
   );
 }
@@ -247,20 +277,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.sm,
     paddingVertical: SPACING.lg,
-  },
-  recordButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scoreArea: {
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  footer: {
-    padding: SPACING.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });
