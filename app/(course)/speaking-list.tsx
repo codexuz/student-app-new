@@ -202,7 +202,18 @@ export default function SpeakingListScreen() {
   }
 
   const openTask = (destination: TaskDestination, task: SpeakingTask) => {
-    router.push({ pathname: destination, params: { speakingId: task.id, lessonId } });
+    router.push({
+      pathname: destination,
+      params: {
+        speakingId: task.id,
+        lessonId,
+        // A completed speaking task already carries its graded submission —
+        // pass it along so the screen can show the result instead of an empty composer.
+        ...(destination === '/speaking' && task.submissionDetails
+          ? { submission: JSON.stringify(task.submissionDetails) }
+          : {}),
+      },
+    });
   };
 
   return (
@@ -213,9 +224,7 @@ export default function SpeakingListScreen() {
         <SpeakingGroup
           title='Speaking'
           tasks={speaking}
-          onPress={(task) =>
-            task.isSubmitted ? setRetakeTarget({ task, destination: '/speaking' }) : openTask('/speaking', task)
-          }
+          onPress={(task) => openTask('/speaking', task)}
         />
         <SpeakingGroup
           title='Pronunciation'

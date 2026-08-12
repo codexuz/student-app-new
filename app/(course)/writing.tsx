@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import {
   BookOpen,
@@ -10,12 +10,13 @@ import {
   Link2,
   MessageSquare,
   PenLine,
+  RotateCcw,
 } from 'lucide-react-native';
-import type { LucideProps } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DuoButton } from '@/components/lesson/duo-button';
+import { FeedbackCard } from '@/components/lesson/feedback-card';
 import { AvoidKeyboard } from '@/components/ui/avoid-keyboard';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { ScrollView } from '@/components/ui/scroll-view';
@@ -69,34 +70,6 @@ function parseExistingSubmission(param: string | undefined): { draft: string; re
   }
 }
 
-function FeedbackCard({
-  icon,
-  iconColor,
-  title,
-  feedback,
-}: {
-  icon: React.ComponentType<LucideProps>;
-  iconColor: string;
-  title: string;
-  feedback: string;
-}) {
-  const muted = useColor('textMuted');
-
-  return (
-    <Card style={styles.card}>
-      <View style={styles.feedbackHeader}>
-        <Icon name={icon} size={18} color={iconColor} />
-        <Text variant='body' style={{ fontWeight: '700' }}>
-          {title}
-        </Text>
-      </View>
-      <Text variant='body' style={{ color: muted, lineHeight: 22 }}>
-        {feedback}
-      </Text>
-    </Card>
-  );
-}
-
 function WritingResultView({
   result,
   submittedText,
@@ -114,6 +87,7 @@ function WritingResultView({
   const red = useColor('red');
   const primary = useColor('primary');
   const border = useColor('border');
+  const insets = useSafeAreaInsets();
 
   const { assessment, score } = result;
   const resultColor = scoreColor(score, { emerald, orange, red });
@@ -121,7 +95,10 @@ function WritingResultView({
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + SPACING.lg }]}
+      >
         <Card style={styles.card}>
           <View style={styles.scoreRow}>
             <View>
@@ -225,13 +202,21 @@ function WritingResultView({
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { gap: SPACING.sm }]}>
-        <DuoButton color={resultColor} onPress={onContinue}>
-          Continue Learning
-        </DuoButton>
-        <Button variant='outline' onPress={onRetake} style={{ width: '100%' }}>
-          Retake
-        </Button>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.lg }]}>
+        <View style={styles.footerRow}>
+          <Pressable
+            onPress={onRetake}
+            style={[styles.retryButton, { borderColor: resultColor }]}
+            hitSlop={8}
+            accessibilityRole='button'
+            accessibilityLabel='Retake'
+          >
+            <Icon name={RotateCcw} size={20} color={resultColor} />
+          </Pressable>
+          <DuoButton color={resultColor} onPress={onContinue} style={{ flex: 1 }}>
+            Continue Learning
+          </DuoButton>
+        </View>
       </View>
     </View>
   );
@@ -437,6 +422,19 @@ const styles = StyleSheet.create({
   footer: {
     padding: SPACING.lg,
   },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  retryButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -466,17 +464,12 @@ const styles = StyleSheet.create({
     flexBasis: '47%',
     flexGrow: 1,
     padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS,
+    borderRadius: 6,
     gap: 2,
   },
   correctedBlock: {
     borderLeftWidth: 3,
     borderRadius: SPACING.sm,
     padding: SPACING.sm,
-  },
-  feedbackHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
   },
 });

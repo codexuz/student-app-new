@@ -285,6 +285,13 @@ export interface PronunciationPhrase {
   audio_url: string | null;
 }
 
+export interface SpeakingResponseDetail {
+  question: string | null;
+  transcription: string | null;
+  audio_url: string | null;
+  question_id?: string | number | null;
+}
+
 export interface SpeakingAssessment {
   fluency: number;
   grammar: number;
@@ -295,6 +302,8 @@ export interface SpeakingAssessment {
   grammarFeedback?: string;
   vocabularyFeedback?: string;
   pronunciationFeedback?: string;
+  /** The per-question breakdown, merged in alongside the scores once assessed. */
+  responses?: SpeakingResponseDetail[];
 }
 
 export interface SpeakingResponse {
@@ -304,7 +313,7 @@ export interface SpeakingResponse {
   response_type: SpeakingResponseType;
   audio_url: string[];
   transcription: string | null;
-  result: SpeakingAssessment | { responses: unknown[] } | null;
+  result: SpeakingAssessment | { responses: SpeakingResponseDetail[] } | null;
   pronunciation_score: number | null;
   feedback: string | null;
 }
