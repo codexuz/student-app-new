@@ -56,36 +56,45 @@ export default function ActivityHistoryScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  const userId = user?.user_id;
+
   const loadPage = useCallback(
     async (offset: number) => {
-      if (!user?.user_id) return;
-      const page = await getActivityTransactions(user.user_id, PAGE_SIZE, offset);
+      if (!userId) return;
+      const page = await getActivityTransactions(userId, PAGE_SIZE, offset);
       setTransactions((prev) => (offset === 0 ? page.rows : [...prev, ...page.rows]));
       setTotalCount(page.count);
     },
-    [user?.user_id]
+    [userId]
   );
 
-  const fetchInitial = useCallback(async () => {
+  useEffect(() => {
+    if (!userId) return;
+    // Fetches directly (rather than via `loadPage`) so the setState calls
+    // live in this effect's own .then/.finally — calling a component-scoped
+    // callback that sets state internally trips the set-state-in-effect lint.
+    getActivityTransactions(userId, PAGE_SIZE, 0)
+      .then((page) => {
+        setTransactions(page.rows);
+        setTotalCount(page.count);
+      })
+      .catch((err) => {
+        const description = err instanceof ApiError ? err.message : 'Failed to load activity history.';
+        toast({ variant: 'error', title: 'Error', description });
+      })
+      .finally(() => setIsLoading(false));
+  }, [userId, toast]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
     try {
       await loadPage(0);
     } catch (err) {
-      const description =
-        err instanceof ApiError ? err.message : 'Failed to load activity history.';
+      const description = err instanceof ApiError ? err.message : 'Failed to load activity history.';
       toast({ variant: 'error', title: 'Error', description });
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [loadPage, toast]);
-
-  useEffect(() => {
-    fetchInitial();
-  }, [fetchInitial]);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchInitial();
   };
 
   const handleLoadMore = async () => {

@@ -101,6 +101,8 @@ export interface ExerciseSummary {
   /** Present once merged with the student's submission history (list endpoints only). */
   isCompleted?: boolean;
   score?: number;
+  /** The list endpoint eager-loads full question data (same shape as `Exercise.questions`). */
+  questions?: Question[];
 }
 
 export interface SpeakingTask {

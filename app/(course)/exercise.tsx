@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
-import { Award, CheckCircle2, Coins, Flame } from 'lucide-react-native';
 
+import { AudioHeroPlayer } from '@/components/lesson/audio-hero-player';
+import { Result } from '@/components/lesson/result';
 import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
@@ -12,7 +12,7 @@ import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { useHaptics } from '@/hooks/useHaptics';
 import { ApiError } from '@/lib/api/client';
-import type { Exercise } from '@/lib/api/curriculum-types';
+import type { Exercise, HomeworkRewards } from '@/lib/api/curriculum-types';
 import { getExercise } from '@/lib/api/exercises';
 import { submitHomeworkSection } from '@/lib/api/homework';
 import { SPACING } from '@/theme/globals';
@@ -24,7 +24,7 @@ interface FinishedState {
   correctCount: number;
   totalQuestions: number;
   percentage: number;
-  rewards: { coins: number; streak: number; bonusPoints: number } | null;
+  rewards: HomeworkRewards | null;
 }
 
 export default function ExerciseRunnerScreen() {
@@ -34,7 +34,6 @@ export default function ExerciseRunnerScreen() {
   const primary = useColor('primary');
   const muted = useColor('textMuted');
   const border = useColor('border');
-  const green = useColor('green');
 
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +42,7 @@ export default function ExerciseRunnerScreen() {
   const [showResult, setShowResult] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [finished, setFinished] = useState<FinishedState | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const questions = useMemo(
     () => [...(exercise?.questions ?? [])].sort((a, b) => a.order_number - b.order_number),
@@ -79,6 +79,10 @@ export default function ExerciseRunnerScreen() {
     if (exercise) navigation.setOptions({ title: exercise.title });
   }, [exercise, navigation]);
 
+  useEffect(() => {
+    navigation.setOptions({ headerShown: !finished });
+  }, [finished, navigation]);
+
   const currentQuestion = questions[currentIndex];
   const currentAnswer = answers[currentIndex];
   const canCheck = currentQuestion && currentAnswer ? isAnswerComplete(currentQuestion, currentAnswer) : false;
@@ -91,13 +95,7 @@ export default function ExerciseRunnerScreen() {
     setShowResult(true);
   };
 
-  const handleContinue = async () => {
-    if (!isLast) {
-      setCurrentIndex((i) => i + 1);
-      setShowResult(false);
-      return;
-    }
-
+  const submitResults = async () => {
     // Score every question up front so the submission reflects the whole
     // attempt, not just the last one checked.
     const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
@@ -109,6 +107,7 @@ export default function ExerciseRunnerScreen() {
     const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
 
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const result = await submitHomeworkSection({
         lesson_id: lessonId,
@@ -123,13 +122,28 @@ export default function ExerciseRunnerScreen() {
         percentage: result.section.score ?? percentage,
         rewards: result.rewards,
       });
-    } catch {
+    } catch (err) {
       // Submission failing shouldn't trap the student on a finished exercise —
-      // still show their local score, just without server-confirmed rewards.
+      // still show their local score, but flag that it wasn't saved so they
+      // know to retry (otherwise this exercise silently never shows as
+      // completed back on the exercise list).
+      console.error('Failed to submit exercise results:', err);
       setFinished({ correctCount, totalQuestions: questions.length, percentage, rewards: null });
+      setSubmitError(
+        err instanceof ApiError ? err.message : 'Could not save your progress. Check your connection and retry.'
+      );
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleContinue = () => {
+    if (!isLast) {
+      setCurrentIndex((i) => i + 1);
+      setShowResult(false);
+      return;
+    }
+    submitResults();
   };
 
   if (error) {
@@ -152,40 +166,16 @@ export default function ExerciseRunnerScreen() {
 
   if (finished) {
     return (
-      <View style={styles.centerFill}>
-        <View style={[styles.resultBadge, { backgroundColor: `${green}18` }]}>
-          <Icon name={CheckCircle2} size={40} color={green} />
-        </View>
-        <Text variant='heading'>{finished.percentage}%</Text>
-        <Text variant='caption'>
-          {finished.correctCount}/{finished.totalQuestions} correct
-        </Text>
-
-        {finished.rewards && (
-          <View style={styles.rewardsRow}>
-            <View style={styles.rewardChip}>
-              <Icon name={Coins} size={16} color={muted} />
-              <Text variant='caption'>+{finished.rewards.coins}</Text>
-            </View>
-            <View style={styles.rewardChip}>
-              <Icon name={Flame} size={16} color={muted} />
-              <Text variant='caption'>+{finished.rewards.streak}</Text>
-            </View>
-            <View style={styles.rewardChip}>
-              <Icon name={Award} size={16} color={muted} />
-              <Text variant='caption'>+{finished.rewards.bonusPoints}</Text>
-            </View>
-          </View>
-        )}
-
-        <Button
-          size='lg'
-          style={{ width: '100%', marginTop: SPACING.lg }}
-          onPress={() => router.dismissTo({ pathname: '/lesson', params: { lessonId } })}
-        >
-          Continue
-        </Button>
-      </View>
+      <Result
+        percentage={finished.percentage}
+        correctCount={finished.correctCount}
+        totalQuestions={finished.totalQuestions}
+        rewards={finished.rewards}
+        submitError={submitError}
+        submitting={submitting}
+        onRetry={submitResults}
+        onContinue={() => router.dismissTo({ pathname: '/lesson', params: { lessonId } })}
+      />
     );
   }
 
@@ -201,6 +191,8 @@ export default function ExerciseRunnerScreen() {
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        {!!exercise.audio_url && <AudioHeroPlayer key={exercise.id} url={exercise.audio_url} />}
+
         <Text variant='caption' style={{ color: muted }}>
           Question {currentIndex + 1} of {questions.length}
         </Text>
@@ -253,23 +245,5 @@ const styles = StyleSheet.create({
   footer: {
     padding: SPACING.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  resultBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  rewardsRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginTop: SPACING.md,
-  },
-  rewardChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
   },
 });

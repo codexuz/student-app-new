@@ -86,6 +86,9 @@ const lightColors = {
   // Decorative accent for system/info features
   indigo: '#4F46E5',
 
+  // Decorative accent — oklch(69.6% 0.17 162.48)
+  emerald: '#00BC7D',
+
   // Semantic states — reuse the same hues as their raw counterparts above so
   // "success" and "green" (etc.) never silently drift apart.
   success: '#16A34A',
@@ -174,6 +177,9 @@ const darkColors = {
 
   // Decorative accent for system/info features
   indigo: '#6366F1',
+
+  // Decorative accent — oklch(69.6% 0.17 162.48)
+  emerald: '#00BC7D',
 
   // Semantic states
   success: '#22C55E',

@@ -84,11 +84,68 @@ function EmbedPlayer({ block }: { block: LessonContentBlock }) {
 
 function ContentBlockView({ block }: { block: LessonContentBlock }) {
   const text = useColor('text');
+  const primary = useColor('primary');
+  const secondary = useColor('secondary');
 
   switch (block.type) {
     case 'text':
       return (
-        <Markdown style={{ body: { color: text, fontSize: 15, lineHeight: 40 } }}>
+        <Markdown
+          style={{
+            body: { color: text, fontSize: 15, lineHeight: 38 },
+            blockquote: {
+              backgroundColor: secondary,
+              borderColor: primary,
+              borderLeftWidth: 4,
+              borderRadius: 0,
+              marginLeft: 0,
+              paddingHorizontal: SPACING.md,
+              paddingVertical: SPACING.xs,
+            },
+            heading1: {
+              color: text,
+              fontSize: 28,
+              fontWeight: '700',
+              marginTop: SPACING.lg,
+              marginBottom: SPACING.sm,
+            },
+            heading2: {
+              color: text,
+              fontSize: 24,
+              fontWeight: '700',
+              marginTop: SPACING.lg,
+              marginBottom: SPACING.sm,
+            },
+            heading3: {
+              color: text,
+              fontSize: 19,
+              fontWeight: '600',
+              marginTop: SPACING.md,
+              marginBottom: SPACING.xs,
+            },
+            heading4: {
+              color: primary,
+              fontSize: 16,
+              fontWeight: '600',
+              marginTop: SPACING.md,
+              marginBottom: SPACING.xs,
+            },
+            heading5: {
+              color: primary,
+              fontSize: 14,
+              fontWeight: '600',
+              marginTop: SPACING.sm,
+              marginBottom: SPACING.xs,
+            },
+            heading6: {
+              color: primary,
+              fontSize: 13,
+              fontWeight: '600',
+              marginTop: SPACING.sm,
+              marginBottom: SPACING.xs,
+            },
+          }}
+        >
           {block.content}
         </Markdown>
       );

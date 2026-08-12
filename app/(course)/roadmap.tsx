@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Dimensions, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, GraduationCap, Lock, Play } from 'lucide-react-native';
@@ -214,26 +214,44 @@ function UnitSection({ unit, index }: { unit: RoadmapUnit; index: number }) {
 export default function RoadmapScreen() {
   const { courseId, groupId } = useLocalSearchParams<{ courseId: string; groupId: string }>();
   const muted = useColor('textMuted');
+  const primary = useColor('primary');
   const [units, setUnits] = useState<RoadmapUnit[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (!courseId || !groupId) return;
-    let isMounted = true;
-
-    getRoadmap(courseId, groupId)
-      .then((data) => {
-        if (isMounted) setUnits(data);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
+  const fetchRoadmap = useCallback(
+    async (isMounted: () => boolean) => {
+      if (!courseId || !groupId) return;
+      try {
+        const data = await getRoadmap(courseId, groupId);
+        if (!isMounted()) return;
+        setUnits(data);
+        setError(null);
+      } catch (err) {
+        if (!isMounted()) return;
         setError(err instanceof ApiError ? err.message : 'Failed to load your roadmap.');
-      });
+      }
+    },
+    [courseId, groupId]
+  );
 
-    return () => {
-      isMounted = false;
-    };
-  }, [courseId, groupId]);
+  // Refetches every time this route regains focus — e.g. finishing a lesson
+  // and navigating back should reflect the newly-completed progress.
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      fetchRoadmap(() => mounted);
+      return () => {
+        mounted = false;
+      };
+    }, [fetchRoadmap])
+  );
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchRoadmap(() => true);
+    setIsRefreshing(false);
+  };
 
   if (error) {
     return (
@@ -267,7 +285,11 @@ export default function RoadmapScreen() {
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ headerShown: false }} />
       <RoadmapHeader percentage={overallPercentage} />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.container, { paddingTop: SPACING.lg }]}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.container, { paddingTop: SPACING.lg }]}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={primary} />}
+      >
         {units.map((unit, index) => (
           <UnitSection key={unit.unit_id} unit={unit} index={index} />
         ))}
