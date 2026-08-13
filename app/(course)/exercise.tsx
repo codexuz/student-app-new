@@ -2,17 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 
+import { ExerciseFeedbackBanner } from '@/components/exercise/feedback-banner';
 import { AudioHeroPlayer } from '@/components/lesson/audio-hero-player';
+import { DuoButton } from '@/components/lesson/duo-button';
 import { Result } from '@/components/lesson/result';
-import { Button } from '@/components/ui/button';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
+import { useFeedbackSounds } from '@/hooks/useFeedbackSounds';
 import { useHaptics } from '@/hooks/useHaptics';
 import { ApiError } from '@/lib/api/client';
-import type { Exercise, HomeworkRewards } from '@/lib/api/curriculum-types';
+import type { Exercise, HomeworkRewards, QuestionType } from '@/lib/api/curriculum-types';
 import { getExercise } from '@/lib/api/exercises';
 import { submitHomeworkSection } from '@/lib/api/homework';
 import { SPACING } from '@/theme/globals';
@@ -28,10 +30,22 @@ interface FinishedState {
   rewards: HomeworkRewards | null;
 }
 
+// Some question types read better with a fixed instruction than their
+// per-question `question_text` (which is often blank or redundant for these).
+const STATIC_PROMPTS: Partial<Record<QuestionType, string>> = {
+  sentence_build: 'Reorder words to make up a sentence',
+  fill_in_the_blank: 'Choose the options to fill gaps',
+};
+
+// Other question types keep their own `question_text`, but still show the
+// exercise's own `instructions` (from the backend) alongside it when present.
+const INSTRUCTION_TYPES = new Set<QuestionType>(['multiple_choice', 'true_false', 'short_answer']);
+
 export default function ExerciseRunnerScreen() {
   const { exerciseId, lessonId } = useLocalSearchParams<{ exerciseId: string; lessonId: string }>();
   const navigation = useNavigation();
   const feedback = useHaptics(true);
+  const { playCorrect, playWrong } = useFeedbackSounds();
   const primary = useColor('primary');
   const muted = useColor('textMuted');
   const border = useColor('border');
@@ -44,6 +58,7 @@ export default function ExerciseRunnerScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [finished, setFinished] = useState<FinishedState | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<{ isCorrect: boolean; correctAnswer?: string } | null>(null);
 
   const questions = useMemo(
     () => [...(exercise?.questions ?? [])].sort((a, b) => a.order_number - b.order_number),
@@ -93,6 +108,15 @@ export default function ExerciseRunnerScreen() {
     if (!currentQuestion || !currentAnswer) return;
     const result = gradeQuestion(currentQuestion, currentAnswer);
     feedback(result.isCorrect ? 'success' : 'error');
+    if (result.isCorrect) playCorrect();
+    else playWrong();
+
+    const correctAnswer =
+      !result.isCorrect && currentQuestion.question_type === 'short_answer'
+        ? currentQuestion.typing_exercise?.[0]?.correct_answer.split('/')[0]?.trim()
+        : undefined;
+
+    setLastResult({ isCorrect: result.isCorrect, correctAnswer });
     setShowResult(true);
   };
 
@@ -142,6 +166,7 @@ export default function ExerciseRunnerScreen() {
     if (!isLast) {
       setCurrentIndex((i) => i + 1);
       setShowResult(false);
+      setLastResult(null);
       return;
     }
     submitResults();
@@ -200,7 +225,12 @@ export default function ExerciseRunnerScreen() {
         <Text variant='caption' style={{ color: muted }}>
           Question {currentIndex + 1} of {questions.length}
         </Text>
-        <Text variant='title'>{currentQuestion.question_text}</Text>
+        {!!exercise.instructions && INSTRUCTION_TYPES.has(currentQuestion.question_type) && (
+          <Text variant='caption' style={{ color: primary, fontWeight: '700' }}>
+            {exercise.instructions}
+          </Text>
+        )}
+        <Text variant='title'>{STATIC_PROMPTS[currentQuestion.question_type] ?? currentQuestion.question_text}</Text>
 
         {currentAnswer && (
           <QuestionRenderer
@@ -212,17 +242,21 @@ export default function ExerciseRunnerScreen() {
         )}
       </ScrollView>
 
-      <View style={{...styles.footer, borderTopColor: border}}>
-        {showResult ? (
-          <Button size='lg' style={{ width: '100%' }} onPress={handleContinue} disabled={submitting}>
-            {submitting ? 'Submitting…' : isLast ? 'See Results' : 'Continue'}
-          </Button>
-        ) : (
-          <Button size='lg' style={{ width: '100%' }} onPress={handleCheck} disabled={!canCheck}>
+      {showResult ? (
+        <ExerciseFeedbackBanner
+          isCorrect={!!lastResult?.isCorrect}
+          subtitle={lastResult?.correctAnswer ? `Correct answer: ${lastResult.correctAnswer}` : undefined}
+          primaryLabel={submitting ? 'Submitting…' : isLast ? 'See Results' : 'Continue'}
+          primaryDisabled={submitting}
+          onPrimary={handleContinue}
+        />
+      ) : (
+        <View style={{ ...styles.footer, borderTopColor: border }}>
+          <DuoButton color={primary} onPress={handleCheck} disabled={!canCheck}>
             Check Answer
-          </Button>
-        )}
-      </View>
+          </DuoButton>
+        </View>
+      )}
     </View>
   );
 }

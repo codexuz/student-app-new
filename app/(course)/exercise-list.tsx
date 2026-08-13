@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Ear,
   Inbox,
+  Info,
   Languages,
   ListChecks,
   MessageSquare,
@@ -215,6 +216,25 @@ function RetakeExerciseSheet({
   );
 }
 
+function CompletionInfoSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const muted = useColor('textMuted');
+
+  return (
+    <BottomSheet isVisible={visible} onClose={onClose} snapPoints={[0.35]} title='Completion rule'>
+      <Text variant='body' style={{ textAlign: 'center' }}>
+        An exercise only counts as completed once you score{' '}
+        <Text variant='body' style={{ fontWeight: '700' }}>
+          60% or higher
+        </Text>
+        . Anything below that stays marked as incomplete — retake it to raise your score.
+      </Text>
+      <Text variant='caption' style={{ color: muted, textAlign: 'center', marginTop: SPACING.sm }}>
+        Tap an exercise anytime to try again.
+      </Text>
+    </BottomSheet>
+  );
+}
+
 export default function ExerciseListScreen() {
   const { lessonId, type } = useLocalSearchParams<{ lessonId: string; type: ExerciseCategory }>();
   const navigation = useNavigation();
@@ -224,10 +244,19 @@ export default function ExerciseListScreen() {
   const [exercises, setExercises] = useState<ExerciseSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retakeTarget, setRetakeTarget] = useState<ExerciseSummary | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
-    if (type) navigation.setOptions({ title: `${CATEGORY_LABEL[type]} Exercises` });
-  }, [type, navigation]);
+    if (!type) return;
+    navigation.setOptions({
+      title: `${CATEGORY_LABEL[type]} Exercises`,
+      headerRight: () => (
+        <Pressable onPress={() => setShowInfo(true)} hitSlop={8}>
+          <Icon name={Info} size={20} color={muted} />
+        </Pressable>
+      ),
+    });
+  }, [type, navigation, muted]);
 
   useEffect(() => {
     if (!lessonId || !type) return;
@@ -256,6 +285,7 @@ export default function ExerciseListScreen() {
             {error}
           </Text>
         </View>
+        <CompletionInfoSheet visible={showInfo} onClose={() => setShowInfo(false)} />
       </View>
     );
   }
@@ -267,6 +297,7 @@ export default function ExerciseListScreen() {
         <View style={styles.centerFill}>
           <Spinner size='lg' />
         </View>
+        <CompletionInfoSheet visible={showInfo} onClose={() => setShowInfo(false)} />
       </View>
     );
   }
@@ -284,6 +315,7 @@ export default function ExerciseListScreen() {
             Check back once this section has exercises assigned.
           </Text>
         </View>
+        <CompletionInfoSheet visible={showInfo} onClose={() => setShowInfo(false)} />
       </View>
     );
   }
@@ -342,6 +374,8 @@ export default function ExerciseListScreen() {
         }}
         onCancel={() => setRetakeTarget(null)}
       />
+
+      <CompletionInfoSheet visible={showInfo} onClose={() => setShowInfo(false)} />
     </View>
   );
 }

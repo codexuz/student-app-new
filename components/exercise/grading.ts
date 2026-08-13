@@ -13,10 +13,16 @@ import type {
   TranslationAnswer,
 } from '@/components/exercise/answer-types';
 
+// Straight quote, iOS/Android smart quotes (' '), backtick, acute accent, and
+// the Unicode "modifier letter apostrophe" — every apostrophe glyph a mobile
+// keyboard's autocorrect might substitute in, all stripped the same as a
+// missing apostrophe so "dont"/"don't"/"don't" all grade as equal.
+const PUNCTUATION_PATTERN = /[.,!?;:"'‘’‛ʼ´`]/g;
+
 function normalize(text: string, caseSensitive = false): string {
   const trimmed = text.trim().replace(/\s+/g, ' ');
   const cased = caseSensitive ? trimmed : trimmed.toLowerCase();
-  return cased.replace(/[.,!?;:'"]/g, '');
+  return cased.replace(PUNCTUATION_PATTERN, '');
 }
 
 /** `correct_answer` fields may pack alternatives separated by `/`. */

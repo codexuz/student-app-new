@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { StyleSheet } from 'react-native';
-import DuoDragDrop, { type DuoDragDropRef } from '@jamsch/react-native-duo-drag-drop';
+import DuoDragDrop, { Word, type DuoDragDropRef } from '@jamsch/react-native-duo-drag-drop';
 
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
@@ -30,10 +30,10 @@ export function TranslationQuestion({
   showResult: boolean;
 }) {
   const ref = useRef<DuoDragDropRef>(null);
-  const border = useColor('border');
-  const green = useColor('green');
-  const red = useColor('red');
   const data = question.translation;
+  const card = useColor('card');
+  const border = useColor('border');
+  const text = useColor('text');
 
   // Alternate accepted answers are packed as `answer one/answer two` — only
   // the first is buildable as a word bank.
@@ -42,11 +42,6 @@ export function TranslationQuestion({
     [data]
   );
 
-  const isCorrect = showResult
-    ? value.text.trim().toLowerCase() ===
-      (data?.correct_answer.split('/')[0] ?? '').trim().toLowerCase()
-    : null;
-
   if (!data) return null;
 
   return (
@@ -54,19 +49,15 @@ export function TranslationQuestion({
       <Text variant='body' style={styles.prompt}>
         {data.given_text}
       </Text>
-      <View
-        style={[
-          styles.widget,
-          { borderColor: isCorrect === null ? border : isCorrect ? green : red },
-        ]}
-      >
-        <DuoDragDrop
-          ref={ref}
-          words={words}
-          gesturesDisabled={showResult}
-          onDrop={() => onChange({ text: ref.current?.getAnsweredWords().join(' ') ?? '' })}
-        />
-      </View>
+      <DuoDragDrop
+        ref={ref}
+        words={words}
+        gesturesDisabled={showResult}
+        renderWord={() => (
+          <Word containerStyle={{ backgroundColor: card, borderColor: border }} textStyle={{ color: text }} />
+        )}
+        onDrop={() => onChange({ text: ref.current?.getAnsweredWords().join(' ') ?? '' })}
+      />
     </View>
   );
 }
@@ -75,11 +66,5 @@ const styles = StyleSheet.create({
   prompt: {
     marginBottom: SPACING.sm,
     fontWeight: '600',
-  },
-  widget: {
-    minHeight: 180,
-    borderWidth: 1.5,
-    borderRadius: SPACING.sm,
-    padding: SPACING.sm,
   },
 });

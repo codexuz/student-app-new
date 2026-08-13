@@ -1,16 +1,11 @@
-import { Pressable, StyleSheet } from 'react-native';
-import { Check, X } from 'lucide-react-native';
+import { StyleSheet } from 'react-native';
 
-import { Icon } from '@/components/ui/icon';
-import { Text } from '@/components/ui/text';
+import { OptionCard } from '@/components/exercise/option-card';
 import { View } from '@/components/ui/view';
-import { useColor } from '@/hooks/useColor';
 import { useHaptics } from '@/hooks/useHaptics';
 import { SPACING } from '@/theme/globals';
 import type { MultipleChoiceAnswer } from '@/components/exercise/answer-types';
 import type { Question } from '@/lib/api/curriculum-types';
-
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 export function MultipleChoiceQuestion({
   question,
@@ -23,59 +18,24 @@ export function MultipleChoiceQuestion({
   onChange: (value: MultipleChoiceAnswer) => void;
   showResult: boolean;
 }) {
-  const card = useColor('card');
-  const border = useColor('border');
-  const primary = useColor('primary');
-  const primaryForeground = useColor('primaryForeground');
-  const green = useColor('green');
-  const red = useColor('red');
   const feedback = useHaptics(true);
   const choices = question.choices ?? [];
 
   return (
     <View style={styles.list}>
-      {choices.map((choice, index) => {
-        const isSelected = value.selectedChoiceId === choice.id;
-        const revealCorrect = showResult && choice.is_correct;
-        const revealWrong = showResult && isSelected && !choice.is_correct;
-
-        const backgroundColor = revealCorrect
-          ? `${green}22`
-          : revealWrong
-            ? `${red}22`
-            : isSelected
-              ? `${primary}18`
-              : card;
-        const borderColor = revealCorrect ? green : revealWrong ? red : isSelected ? primary : border;
-
-        return (
-          <Pressable
-            key={choice.id}
-            disabled={showResult}
-            onPress={() => {
-              feedback('selection');
-              onChange({ selectedChoiceId: choice.id });
-            }}
-            style={[styles.option, { backgroundColor, borderColor }]}
-          >
-            <View
-              style={[
-                styles.letterBadge,
-                { backgroundColor: isSelected ? primary : border },
-              ]}
-            >
-              <Text style={{ color: isSelected ? primaryForeground : undefined, fontWeight: '700' }}>
-                {LETTERS[index] ?? index + 1}
-              </Text>
-            </View>
-            <Text variant='body' style={{ flex: 1 }}>
-              {choice.option_text}
-            </Text>
-            {revealCorrect && <Icon name={Check} size={18} color={green} />}
-            {revealWrong && <Icon name={X} size={18} color={red} />}
-          </Pressable>
-        );
-      })}
+      {choices.map((choice) => (
+        <OptionCard
+          key={choice.id}
+          label={choice.option_text}
+          isCorrectOption={choice.is_correct}
+          isSelected={value.selectedChoiceId === choice.id}
+          showResult={showResult}
+          onPress={() => {
+            feedback('selection');
+            onChange({ selectedChoiceId: choice.id });
+          }}
+        />
+      ))}
     </View>
   );
 }
@@ -83,20 +43,5 @@ export function MultipleChoiceQuestion({
 const styles = StyleSheet.create({
   list: {
     gap: SPACING.sm,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    padding: SPACING.sm,
-    borderRadius: SPACING.sm,
-    borderWidth: 1.5,
-  },
-  letterBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

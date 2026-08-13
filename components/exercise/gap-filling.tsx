@@ -1,7 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
+import { Check, ChevronDown } from 'lucide-react-native';
 
 import { BottomSheet, useBottomSheet } from '@/components/ui/bottom-sheet';
+import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
@@ -50,7 +52,6 @@ export function GapFillingQuestion({
   showResult: boolean;
 }) {
   const primary = useColor('primary');
-  const card = useColor('card');
   const border = useColor('border');
   const green = useColor('green');
   const red = useColor('red');
@@ -115,30 +116,44 @@ export function GapFillingQuestion({
               onPress={() => openPicker(part.blankIndex!)}
               style={[styles.blank, { backgroundColor, borderColor }]}
             >
-              <Text variant='body' style={{ fontWeight: '600' }}>
-                {chosen || '_____'}
-              </Text>
+              {!!chosen && (
+                <Text variant='body' style={{ fontWeight: '600' }}>
+                  {chosen}
+                </Text>
+              )}
+              {!showResult && <Icon name={ChevronDown} size={16} color={borderColor} strokeWidth={2.4} />}
             </Pressable>
           );
         })}
       </View>
 
-      <BottomSheet isVisible={sheet.isVisible} onClose={sheet.close} snapPoints={[0.4]} title='Choose a word'>
-        <View style={styles.wordBank}>
+      <BottomSheet isVisible={sheet.isVisible} onClose={sheet.close} snapPoints={[0.6]} title='Choose a word'>
+        <View style={styles.optionList}>
           {wordBank.map((word, index) => {
-            const isUsed = usedWords.has(word) && value.values[activeGap ?? -1] !== word;
+            const isSelected = value.values[activeGap ?? -1] === word;
+            const isUsed = usedWords.has(word) && !isSelected;
             return (
               <Pressable
                 key={`${word}-${index}`}
                 disabled={isUsed}
                 onPress={() => pickWord(word)}
                 style={[
-                  styles.wordChip,
-                  { backgroundColor: card, borderColor: border },
-                  isUsed && styles.wordChipUsed,
+                  styles.optionRow,
+                  { borderBottomColor: border },
+                  isSelected && { backgroundColor: `${primary}14` },
+                  isUsed && styles.optionRowUsed,
+                  index === wordBank.length - 1 && { borderBottomWidth: 0 },
                 ]}
               >
-                <Text style={isUsed ? { color: muted } : undefined}>{word}</Text>
+                <Text
+                  style={[
+                    isUsed && { color: muted },
+                    isSelected && { color: primary, fontWeight: '700' },
+                  ]}
+                >
+                  {word}
+                </Text>
+                {isSelected && <Icon name={Check} size={18} color={primary} strokeWidth={2.4} />}
               </Pressable>
             );
           })}
@@ -159,25 +174,28 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   blank: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     borderWidth: 1.5,
     borderRadius: SPACING.xs,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
-    minWidth: 64,
-    alignItems: 'center',
+    minWidth: 40,
+    justifyContent: 'center',
   },
-  wordBank: {
+  optionList: {
+    borderRadius: SPACING.sm,
+  },
+  optionRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  wordChip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-  },
-  wordChipUsed: {
+  optionRowUsed: {
     opacity: 0.4,
   },
 });

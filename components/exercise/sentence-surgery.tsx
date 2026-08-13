@@ -1,13 +1,19 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { Check, X } from 'lucide-react-native';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
-import { Icon } from '@/components/ui/icon';
+import { OptionCard } from '@/components/exercise/option-card';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { useHaptics } from '@/hooks/useHaptics';
-import { SPACING } from '@/theme/globals';
+import { CORNERS, SPACING } from '@/theme/globals';
 import type { SentenceSurgeryAnswer } from '@/components/exercise/answer-types';
 import type { Question } from '@/lib/api/curriculum-types';
 
@@ -27,6 +33,52 @@ function tokenize(text: string): Token[] {
   return tokens;
 }
 
+function WordChip({
+  text,
+  isFound,
+  disabled,
+  shakeNonce,
+  onPress,
+}: {
+  text: string;
+  isFound: boolean;
+  disabled: boolean;
+  /** Bumped by the parent each time this specific word is tapped incorrectly. */
+  shakeNonce: number | null;
+  onPress: () => void;
+}) {
+  const border = useColor('border');
+  const red = useColor('red');
+  const shakeX = useSharedValue(0);
+  const flash = useSharedValue(0);
+
+  useEffect(() => {
+    if (shakeNonce == null) return;
+    shakeX.value = withSequence(
+      withTiming(-6, { duration: 45 }),
+      withTiming(6, { duration: 45 }),
+      withTiming(-4, { duration: 45 }),
+      withTiming(4, { duration: 45 }),
+      withTiming(0, { duration: 45 })
+    );
+    flash.value = withSequence(withTiming(1, { duration: 60 }), withTiming(0, { duration: 250 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shakeNonce]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }],
+    backgroundColor: isFound ? `${red}22` : interpolateColor(flash.value, [0, 1], [`${red}00`, `${red}40`]),
+  }));
+
+  return (
+    <Pressable onPress={onPress} disabled={disabled}>
+      <Animated.View style={[styles.wordChip, { borderColor: isFound ? red : border }, animatedStyle]}>
+        <Text variant='body'>{text}</Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export function SentenceSurgeryQuestion({
   question,
   value,
@@ -38,13 +90,10 @@ export function SentenceSurgeryQuestion({
   onChange: (value: SentenceSurgeryAnswer) => void;
   showResult: boolean;
 }) {
-  const card = useColor('card');
-  const border = useColor('border');
   const primary = useColor('primary');
-  const green = useColor('green');
-  const red = useColor('red');
   const feedback = useHaptics(true);
   const data = question.sentence_surgery;
+  const [wrongTap, setWrongTap] = useState<{ index: number; nonce: number } | null>(null);
 
   const tokens = useMemo(() => tokenize(question.question_text), [question.question_text]);
   const errorTokenIndex = useMemo(() => {
@@ -63,6 +112,7 @@ export function SentenceSurgeryQuestion({
       onChange({ ...value, foundIndex: index });
     } else {
       feedback('error');
+      setWrongTap((prev) => ({ index, nonce: (prev?.nonce ?? 0) + 1 }));
     }
   };
 
@@ -73,56 +123,33 @@ export function SentenceSurgeryQuestion({
       </Text>
 
       <View style={styles.words}>
-        {tokens.map((token, index) => {
-          const isFound = value.foundIndex === index;
-          return (
-            <Pressable
-              key={index}
-              onPress={() => tapWord(index)}
-              style={[
-                styles.wordChip,
-                isFound && { backgroundColor: `${red}22`, borderColor: red },
-              ]}
-            >
-              <Text variant='body'>{token.text}</Text>
-            </Pressable>
-          );
-        })}
+        {tokens.map((token, index) => (
+          <WordChip
+            key={index}
+            text={token.text}
+            isFound={value.foundIndex === index}
+            disabled={showResult || foundError}
+            shakeNonce={wrongTap?.index === index ? wrongTap.nonce : null}
+            onPress={() => tapWord(index)}
+          />
+        ))}
       </View>
 
       {foundError && (
         <View style={styles.options}>
-          {data.options.map((option, index) => {
-            const isSelected = value.selectedOptionIndex === index;
-            const revealCorrect = showResult && option.is_correct;
-            const revealWrong = showResult && isSelected && !option.is_correct;
-            const backgroundColor = revealCorrect
-              ? `${green}22`
-              : revealWrong
-                ? `${red}22`
-                : isSelected
-                  ? `${primary}18`
-                  : card;
-            const borderColor = revealCorrect ? green : revealWrong ? red : isSelected ? primary : border;
-
-            return (
-              <Pressable
-                key={index}
-                disabled={showResult}
-                onPress={() => {
-                  feedback('selection');
-                  onChange({ ...value, selectedOptionIndex: index });
-                }}
-                style={[styles.option, { backgroundColor, borderColor }]}
-              >
-                <Text variant='body' style={{ flex: 1 }}>
-                  {option.text}
-                </Text>
-                {revealCorrect && <Icon name={Check} size={18} color={green} />}
-                {revealWrong && <Icon name={X} size={18} color={red} />}
-              </Pressable>
-            );
-          })}
+          {data.options.map((option, index) => (
+            <OptionCard
+              key={index}
+              label={option.text}
+              isCorrectOption={option.is_correct}
+              isSelected={value.selectedOptionIndex === index}
+              showResult={showResult}
+              onPress={() => {
+                feedback('selection');
+                onChange({ ...value, selectedOptionIndex: index });
+              }}
+            />
+          ))}
 
           {showResult && !!question.sample_answer && (
             <View style={[styles.explanation, { backgroundColor: `${primary}10` }]}>
@@ -147,21 +174,13 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   wordChip: {
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    borderRadius: SPACING.xs,
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 4,
+    borderWidth: 2,
+    borderRadius: CORNERS,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
   },
   options: {
     gap: SPACING.sm,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.sm,
-    borderRadius: SPACING.sm,
-    borderWidth: 1.5,
   },
   explanation: {
     padding: SPACING.sm,

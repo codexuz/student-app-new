@@ -116,7 +116,7 @@ export function Result({
             <View style={styles.rewardItem}>
               <Image
                 source={require('@/assets/images/coin-noanimted.png')}
-                style={styles.rewardIcon}
+                style={{width: 40, height: 40}}
                 contentFit='contain'
               />
               <Text style={[styles.rewardValue, { color: orange }]}>+{rewards.coins}</Text>
@@ -203,6 +203,7 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 0,
     overflow: 'hidden',
+    elevation: 0,
   },
   rewardsHeader: {
     width: '100%',

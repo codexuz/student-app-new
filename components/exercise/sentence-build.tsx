@@ -1,8 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { StyleSheet } from 'react-native';
-import DuoDragDrop, { type DuoDragDropRef } from '@jamsch/react-native-duo-drag-drop';
+import DuoDragDrop, { Word, type DuoDragDropRef } from '@jamsch/react-native-duo-drag-drop';
 
-import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { SPACING } from '@/theme/globals';
@@ -20,44 +19,30 @@ function shuffle<T>(items: T[]): T[] {
 
 function SentenceWidget({
   item,
-  answer,
   onAnswered,
   showResult,
 }: {
   item: SentenceBuildItem;
-  answer: string;
   onAnswered: (sentence: string) => void;
   showResult: boolean;
 }) {
   const ref = useRef<DuoDragDropRef>(null);
   const words = useMemo(() => shuffle(item.correct_answer.split(' ').filter(Boolean)), [item]);
+  const card = useColor('card');
   const border = useColor('border');
-  const green = useColor('green');
-  const red = useColor('red');
-  const isCorrect = showResult
-    ? answer.trim().toLowerCase() === item.correct_answer.trim().toLowerCase()
-    : null;
+  const text = useColor('text');
 
   return (
     <View>
-      {!!item.given_text && (
-        <Text variant='caption' style={styles.prompt}>
-          {item.given_text}
-        </Text>
-      )}
-      <View
-        style={[
-          styles.widget,
-          { borderColor: isCorrect === null ? border : isCorrect ? green : red },
-        ]}
-      >
-        <DuoDragDrop
-          ref={ref}
-          words={words}
-          gesturesDisabled={showResult}
-          onDrop={() => onAnswered(ref.current?.getAnsweredWords().join(' ') ?? '')}
-        />
-      </View>
+      <DuoDragDrop
+        ref={ref}
+        words={words}
+        gesturesDisabled={showResult}
+        renderWord={() => (
+          <Word containerStyle={{ backgroundColor: card, borderColor: border }} textStyle={{ color: text }} />
+        )}
+        onDrop={() => onAnswered(ref.current?.getAnsweredWords().join(' ') ?? '')}
+      />
     </View>
   );
 }
@@ -81,7 +66,6 @@ export function SentenceBuildQuestion({
         <SentenceWidget
           key={item.id}
           item={item}
-          answer={value.sentences[index] ?? ''}
           showResult={showResult}
           onAnswered={(sentence) => {
             const sentences = [...value.sentences];
@@ -97,14 +81,5 @@ export function SentenceBuildQuestion({
 const styles = StyleSheet.create({
   list: {
     gap: SPACING.lg,
-  },
-  prompt: {
-    marginBottom: SPACING.xs,
-  },
-  widget: {
-    minHeight: 180,
-    borderWidth: 1.5,
-    borderRadius: SPACING.sm,
-    padding: SPACING.sm,
   },
 });
