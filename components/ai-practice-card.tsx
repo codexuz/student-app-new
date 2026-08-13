@@ -29,7 +29,7 @@ export interface AiPracticeCardData {
   onPress: () => void;
 }
 
-interface AiPracticeCardProps extends Omit<AiPracticeCardData, 'key'> {}
+type AiPracticeCardProps = Omit<AiPracticeCardData, 'key'>;
 
 export function AiPracticeCard({
   title,
@@ -170,12 +170,15 @@ export function AiPracticeCarousel({
         onScrollBeginDrag={pauseAutoplay}
         onMomentumScrollEnd={handleMomentumEnd}
       >
-        {loopCards.map((card, i) => (
-          <View key={`${card.key}-${i}`} style={{ height: CARD_HEIGHT }}>
-            <AiPracticeCard {...card} onPress={() => {
-              pauseAutoplay();
-              card.onPress();
-            }} />
+        {loopCards.map(({ key, ...card }, i) => (
+          <View key={`${key}-${i}`} style={{ height: CARD_HEIGHT }}>
+            <AiPracticeCard
+              {...card}
+              onPress={() => {
+                pauseAutoplay();
+                card.onPress();
+              }}
+            />
           </View>
         ))}
       </Animated.ScrollView>

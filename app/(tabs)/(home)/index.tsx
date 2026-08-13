@@ -9,6 +9,7 @@ import { HomeHeader } from '@/components/home-header';
 import { buildDefaultShortcuts, ShortcutCards } from '@/components/shortcut-cards';
 import { SocialCards } from '@/components/social-cards';
 import { ScrollView } from '@/components/ui/scroll-view';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
@@ -25,33 +26,29 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const [courses, setCourses] = useState<CourseProgressItem[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    getMyCourseProgress()
-      .then((data) => {
-        if (isMounted) setCourses(data);
+    Promise.all([
+      getMyCourseProgress().catch(() => []),
+      user?.user_id ? getMyStudentProfile(user.user_id).catch(() => null) : Promise.resolve(null),
+    ])
+      .then(([coursesData, profileData]) => {
+        if (!isMounted) return;
+        setCourses(coursesData);
+        setProfile(profileData);
       })
-      .catch(() => {
-        if (isMounted) setCourses([]);
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
-
-    if (user?.user_id) {
-      getMyStudentProfile(user.user_id)
-        .then((data) => {
-          if (isMounted) setProfile(data);
-        })
-        .catch(() => {
-          if (isMounted) setProfile(null);
-        });
-    }
 
     return () => {
       isMounted = false;
     };
-  }, [user?.user_id]);
+  }, [user]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -65,7 +62,7 @@ export default function HomeScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [user?.user_id]);
+  }, [user]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -75,6 +72,7 @@ export default function HomeScreen() {
           avatarUrl={user?.avatar_url}
           streak={profile?.streaks ?? 0}
           coins={profile?.coins ?? 0}
+          statsLoading={loading}
         />
       </View>
 
@@ -83,22 +81,26 @@ export default function HomeScreen() {
         contentContainerStyle={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
-      {courses.map((course) => (
-        <CourseProgressCard
-          key={course.course_id}
-          stepsCompleted={course.completed}
-          totalSteps={course.total}
-          courseName={course.course_name}
-          percentage={course.percentage}
-          onPress={() =>
-            course.group_id &&
-            router.push({
-              pathname: '/roadmap',
-              params: { courseId: course.course_id, groupId: course.group_id },
-            })
-          }
-        />
-      ))}
+      {loading ? (
+        <Skeleton height={124} variant='rounded' />
+      ) : (
+        courses.map((course) => (
+          <CourseProgressCard
+            key={course.course_id}
+            stepsCompleted={course.completed}
+            totalSteps={course.total}
+            courseName={course.course_name}
+            percentage={course.percentage}
+            onPress={() =>
+              course.group_id &&
+              router.push({
+                pathname: '/roadmap',
+                params: { courseId: course.course_id, groupId: course.group_id },
+              })
+            }
+          />
+        ))
+      )}
 
       <AiPracticeCarousel
         cards={buildDefaultAiCards({

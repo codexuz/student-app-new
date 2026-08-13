@@ -5,6 +5,7 @@ import LottieView, { type AnimationObject } from 'lottie-react-native';
 
 import { StreakCalendarSheet } from '@/components/streak-calendar-sheet';
 import { useBottomSheet } from '@/components/ui/bottom-sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
@@ -75,9 +76,11 @@ interface HomeHeaderProps {
   avatarUrl?: string;
   streak: number;
   coins: number;
+  /** Streak/coins haven't loaded yet — show skeleton pills instead of 0s. */
+  statsLoading?: boolean;
 }
 
-export function HomeHeader({ firstName, avatarUrl, streak, coins }: HomeHeaderProps) {
+export function HomeHeader({ firstName, avatarUrl, streak, coins, statsLoading }: HomeHeaderProps) {
   const primary = useColor('primary');
   const foreground = useColor('foreground');
   const avatarLetter = firstName.charAt(0).toUpperCase();
@@ -109,8 +112,17 @@ export function HomeHeader({ firstName, avatarUrl, streak, coins }: HomeHeaderPr
       </View>
 
       <View style={styles.stats}>
-        <StreakChip value={streak} onPress={streakSheet.open} />
-        <CoinsChip value={coins} onPress={() => router.push('/activity-history')} />
+        {statsLoading ? (
+          <>
+            <Skeleton width={56} height={32} variant='rounded' />
+            <Skeleton width={56} height={32} variant='rounded' />
+          </>
+        ) : (
+          <>
+            <StreakChip value={streak} onPress={streakSheet.open} />
+            <CoinsChip value={coins} onPress={() => router.push('/activity-history')} />
+          </>
+        )}
       </View>
 
       <StreakCalendarSheet
