@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { Check, ChevronDown } from 'lucide-react-native';
+import { Check, Plus } from 'lucide-react-native';
 
 import { BottomSheet, useBottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
@@ -53,36 +53,37 @@ export function GapFillingQuestion({
 }) {
   const primary = useColor('primary');
   const border = useColor('border');
+  const secondary = useColor('secondary');
   const green = useColor('green');
   const red = useColor('red');
   const muted = useColor('textMuted');
   const feedback = useHaptics(true);
   const sheet = useBottomSheet();
-  const activeGapRef = useRef<number | null>(null);
   const [activeGap, setActiveGap] = useState<number | null>(null);
+  // Tracks which *word-bank slot* (index) is assigned to each gap — rather than
+  // which word *string* — so two gaps that happen to share the same correct
+  // answer (e.g. both "last") each get their own bank entry instead of one
+  // disabling the other.
+  const [assignedIndex, setAssignedIndex] = useState<Record<number, number>>({});
 
   const parts = useMemo(() => splitIntoParts(question.question_text), [question.question_text]);
   const gaps = useMemo(() => question.gap_filling ?? [], [question.gap_filling]);
 
-  const wordBank = useMemo(
-    () => shuffle(gaps.map((gap) => gap.correct_answer[0] ?? '')),
-    [gaps]
-  );
+  const wordBank = useMemo(() => shuffle(gaps.map((gap) => gap.correct_answer[0] ?? '')), [gaps]);
 
-  const usedWords = new Set(Object.values(value.values));
+  const usedIndices = new Set(Object.values(assignedIndex));
 
   const openPicker = (gapNumber: number) => {
     if (showResult) return;
     feedback('selection');
-    activeGapRef.current = gapNumber;
     setActiveGap(gapNumber);
     sheet.open();
   };
 
-  const pickWord = (word: string) => {
-    const gapNumber = activeGapRef.current;
-    if (gapNumber == null) return;
-    onChange({ values: { ...value.values, [gapNumber]: word } });
+  const pickWord = (word: string, index: number) => {
+    if (activeGap == null) return;
+    onChange({ values: { ...value.values, [activeGap]: word } });
+    setAssignedIndex((prev) => ({ ...prev, [activeGap]: index }));
     sheet.close();
   };
 
@@ -94,49 +95,51 @@ export function GapFillingQuestion({
 
   return (
     <View>
-      <View style={styles.textWrap}>
+      <Text variant='body' style={styles.passage}>
         {parts.map((part, index) => {
-          if (part.blankIndex == null) {
+          if (part.blankIndex == null) return part.text;
+
+          const gapNumber = part.blankIndex;
+          const chosen = value.values[gapNumber];
+          const correct = showResult ? isGapCorrect(gapNumber) : null;
+          const color = correct === true ? green : correct === false ? red : primary;
+
+          if (!chosen) {
             return (
-              <Text key={index} variant='body' style={styles.textPart}>
-                {part.text}
-              </Text>
+              <Pressable
+                key={index}
+                disabled={showResult}
+                onPress={() => openPicker(gapNumber)}
+                style={[styles.blankEmpty, { backgroundColor: secondary }]}
+              >
+                <Icon name={Plus} size={14} color={muted} strokeWidth={2.6} />
+              </Pressable>
             );
           }
 
-          const chosen = value.values[part.blankIndex];
-          const correct = showResult ? isGapCorrect(part.blankIndex) : null;
-          const backgroundColor = correct === null ? `${primary}18` : correct ? `${green}22` : `${red}22`;
-          const borderColor = correct === null ? primary : correct ? green : red;
-
           return (
-            <Pressable
+            <Text
               key={index}
-              disabled={showResult}
-              onPress={() => openPicker(part.blankIndex!)}
-              style={[styles.blank, { backgroundColor, borderColor }]}
+              onPress={() => openPicker(gapNumber)}
+              suppressHighlighting
+              style={{ fontWeight: '700', color }}
             >
-              {!!chosen && (
-                <Text variant='body' style={{ fontWeight: '600' }}>
-                  {chosen}
-                </Text>
-              )}
-              {!showResult && <Icon name={ChevronDown} size={16} color={borderColor} strokeWidth={2.4} />}
-            </Pressable>
+              {chosen}
+            </Text>
           );
         })}
-      </View>
+      </Text>
 
-      <BottomSheet isVisible={sheet.isVisible} onClose={sheet.close} snapPoints={[0.6]} title='Choose a word'>
+      <BottomSheet isVisible={sheet.isVisible} onClose={sheet.close} snapPoints={[0.9]} title='Choose a word'>
         <View style={styles.optionList}>
           {wordBank.map((word, index) => {
-            const isSelected = value.values[activeGap ?? -1] === word;
-            const isUsed = usedWords.has(word) && !isSelected;
+            const isSelected = activeGap != null && assignedIndex[activeGap] === index;
+            const isUsed = usedIndices.has(index) && !isSelected;
             return (
               <Pressable
                 key={`${word}-${index}`}
                 disabled={isUsed}
-                onPress={() => pickWord(word)}
+                onPress={() => pickWord(word, index)}
                 style={[
                   styles.optionRow,
                   { borderBottomColor: border },
@@ -145,12 +148,7 @@ export function GapFillingQuestion({
                   index === wordBank.length - 1 && { borderBottomWidth: 0 },
                 ]}
               >
-                <Text
-                  style={[
-                    isUsed && { color: muted },
-                    isSelected && { color: primary, fontWeight: '700' },
-                  ]}
-                >
+                <Text style={[isUsed && { color: muted }, isSelected && { color: primary, fontWeight: '700' }]}>
                   {word}
                 </Text>
                 {isSelected && <Icon name={Check} size={18} color={primary} strokeWidth={2.4} />}
@@ -164,25 +162,19 @@ export function GapFillingQuestion({
 }
 
 const styles = StyleSheet.create({
-  textWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 4,
+  passage: {
+    lineHeight: 30,
   },
-  textPart: {
-    lineHeight: 28,
-  },
-  blank: {
+  blankEmpty: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    borderWidth: 1.5,
+    justifyContent: 'center',
     borderRadius: SPACING.xs,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
-    minWidth: 40,
-    justifyContent: 'center',
+    marginHorizontal: 3,
+    minWidth: 44,
+    minHeight: 26,
   },
   optionList: {
     borderRadius: SPACING.sm,
