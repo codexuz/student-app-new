@@ -111,9 +111,9 @@ function RootNavigator() {
     <>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} animated />
 
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, headerBackButtonDisplayMode: 'minimal' }}>
         <Stack.Protected guard={isAuthenticated && !shouldPromptForNotifications}>
-          <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+          <Stack.Screen name='(tabs)' options={{ headerShown: false, title: 'Home' }} />
           <Stack.Screen name='(ai-chat)' options={{ headerShown: false }} />
           <Stack.Screen
             name='edit-profile'

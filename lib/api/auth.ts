@@ -47,6 +47,10 @@ export async function login(identifier: string, password: string): Promise<AuthU
 export async function logout(): Promise<void> {
   try {
     await apiRequest('/auth/logout', { method: 'POST' });
+  } catch {
+    // Best-effort — an already-expired/invalid token or a network failure
+    // shouldn't block the client from clearing its local session below and
+    // treating the user as signed out.
   } finally {
     await clearSession();
   }

@@ -14,6 +14,7 @@ export default function ShopStackLayout() {
         headerTintColor: text,
         headerTitleAlign: 'center',
         headerShadowVisible: false,
+        headerBackButtonDisplayMode: 'minimal',
         headerStyle: {
           backgroundColor: isLiquidGlassAvailable() ? 'transparent' : background,
         },

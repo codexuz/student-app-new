@@ -15,6 +15,7 @@ export default function ExamsLayout() {
         headerTintColor: text,
         headerTitleAlign: 'center',
         headerShadowVisible: false,
+        headerBackButtonDisplayMode: 'minimal',
         headerStyle: {
           backgroundColor: isLiquidGlassAvailable() ? 'transparent' : background,
         },
