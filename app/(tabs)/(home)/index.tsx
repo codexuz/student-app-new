@@ -14,6 +14,7 @@ import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { useAuth } from '@/providers/auth-provider';
+import { isAppReviewRestricted } from '@/lib/app-review-restrictions';
 import { getMyCourseProgress } from '@/lib/api/courses';
 import type { CourseProgressItem } from '@/lib/api/curriculum-types';
 import { getMyStudentProfile, type StudentProfile } from '@/lib/api/student-profile';
@@ -115,7 +116,7 @@ export default function HomeScreen() {
           onExamsPress: () => router.push('/exams'),
           onBooksPress: () => router.push('/student-books'),
           onMoviesPress: () => router.push('/movies'),
-        })}
+        }).filter((shortcut) => shortcut.key !== 'movies' || !isAppReviewRestricted(user))}
       />
 
       <SocialCards />

@@ -48,6 +48,7 @@ import { useModeToggle } from '@/hooks/useModeToggle';
 import { ApiError } from '@/lib/api/client';
 import { getPaymentStatus, type PaymentStatus } from '@/lib/api/payments';
 import { uploadAvatar, type UploadableImage } from '@/lib/api/users';
+import { isAppReviewRestricted } from '@/lib/app-review-restrictions';
 import { useAuth } from '@/providers/auth-provider';
 import { useNotificationPermission } from '@/providers/notification-permission-provider';
 import { usePreferences } from '@/providers/preferences-provider';
@@ -101,7 +102,7 @@ export default function ProfileScreen() {
   // Profile only ever mounts once `user` is resolved, so this reflects
   // whether there's anything to fetch right from the first render — no need
   // to flip it synchronously inside the effect below for the "no id" case.
-  const [isLoadingPayment, setIsLoadingPayment] = useState(() => !!user?.user_id);
+  const [isLoadingPayment, setIsLoadingPayment] = useState(() => !!user?.user_id && !isAppReviewRestricted(user));
   const [refreshing, setRefreshing] = useState(false);
   const signOutSheet = useBottomSheet();
   const photoSheet = useBottomSheet();
@@ -114,7 +115,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     const userId = user?.user_id;
-    if (!userId) return;
+    if (!userId || isAppReviewRestricted(user)) return;
 
     let isMounted = true;
 
@@ -137,7 +138,7 @@ export default function ProfileScreen() {
   }, [user?.user_id]);
 
   const onRefresh = async () => {
-    if (!user?.user_id) return;
+    if (!user?.user_id || isAppReviewRestricted(user)) return;
     setRefreshing(true);
     try {
       setPaymentStatus(await getPaymentStatus(user.user_id));
@@ -301,6 +302,8 @@ export default function ProfileScreen() {
   };
 
   const renderPaymentCard = () => {
+    if (isAppReviewRestricted(user)) return null;
+
     if (isLoadingPayment) {
       return (
         <Card style={styles.paymentCard}>

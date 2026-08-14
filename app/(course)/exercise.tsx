@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 
 import { ExerciseFeedbackBanner } from '@/components/exercise/feedback-banner';
 import { AudioHeroPlayer } from '@/components/lesson/audio-hero-player';
 import { DuoButton } from '@/components/lesson/duo-button';
 import { Result } from '@/components/lesson/result';
+import { VideoHeroPlayer } from '@/components/lesson/video-hero-player';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
@@ -217,6 +219,10 @@ export default function ExerciseRunnerScreen() {
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        {!!exercise.video_url && <VideoHeroPlayer key={exercise.id} title={exercise.title} url={exercise.video_url} />}
+        {!!exercise.image_url && (
+          <Image source={{ uri: exercise.image_url }} style={styles.heroImage} contentFit='cover' />
+        )}
         {!!exercise.audio_url && <AudioHeroPlayer key={exercise.id} url={exercise.audio_url} />}
         {exercise.exercise_type === 'reading' && !!exercise.content && (
           <ReadingPassage title={exercise.title} content={exercise.content} />
@@ -279,6 +285,11 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: 4,
+  },
+  heroImage: {
+    width: '100%',
+    aspectRatio: 16 / 10,
+    borderRadius: 20,
   },
   footer: {
     padding: SPACING.lg,
