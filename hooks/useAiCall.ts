@@ -30,7 +30,7 @@ import {
 export type AiCallPhase =
   | 'idle'
   | 'connecting'
-  | 'listening' // mic open, streaming to AI
+  | 'listening' // mic open, streaming to AI 
   | 'speaking' // AI reply playing back
   | 'ended';
 
