@@ -3,7 +3,7 @@ import { View } from '@/components/ui/view';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { useColor } from '@/hooks/useColor';
 import { BORDER_RADIUS } from '@/theme/globals';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   Dimensions,
   Modal,
@@ -30,6 +30,11 @@ const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
 // Smooth slide timing config used for all sheet-position animations.
 const SLIDE_CONFIG = { duration: 350, easing: Easing.out(Easing.cubic) };
 const SLIDE_CONFIG_CLOSE = { duration: 280, easing: Easing.in(Easing.cubic) };
+
+// Stable reference so the default doesn't recreate a new array (and thus
+// invalidate memoized/effect deps below) on every render callers don't pass
+// `snapPoints` explicitly.
+const DEFAULT_SNAP_POINTS = [0.3, 0.6, 0.9];
 
 type BottomSheetContentProps = {
   children: React.ReactNode;
@@ -131,7 +136,7 @@ export function BottomSheet({
   isVisible,
   onClose,
   children,
-  snapPoints = [0.3, 0.6, 0.9],
+  snapPoints = DEFAULT_SNAP_POINTS,
   enableBackdropDismiss = true,
   title,
   style,
@@ -148,15 +153,26 @@ export function BottomSheet({
   // Shared value to hold keyboard height for use in worklets
   const keyboardHeightSV = useSharedValue(0);
 
-  const snapPointsHeights = snapPoints.map((point) => -SCREEN_HEIGHT * point);
+  const snapPointsHeights = useMemo(
+    () => snapPoints.map((point) => -SCREEN_HEIGHT * point),
+    [snapPoints]
+  );
   const defaultHeight = snapPointsHeights[0];
 
   const [modalVisible, setModalVisible] = React.useState(false);
 
-  // Effect to handle opening and closing the bottom sheet
+  // Mount the (still off-screen) Modal the instant we're asked to show it —
+  // derived directly from props during render rather than an effect, since
+  // there's nothing async to wait for here. Closing is the opposite: the
+  // Modal stays mounted until the slide-out animation finishes, so that one
+  // stays an effect-driven, `runOnJS`-deferred update below.
+  if (isVisible && !modalVisible) {
+    setModalVisible(true);
+  }
+
+  // Effect to trigger the open/close animation whenever visibility changes.
   useEffect(() => {
     if (isVisible) {
-      setModalVisible(true);
       translateY.value = withTiming(defaultHeight, SLIDE_CONFIG);
       opacity.value = withTiming(1, { duration: 300 });
       currentSnapIndex.value = 0;
@@ -168,13 +184,17 @@ export function BottomSheet({
         }
       });
     }
-  }, [isVisible, defaultHeight]);
+  }, [isVisible, defaultHeight, translateY, opacity, currentSnapIndex]);
 
   // Function to animate the sheet to a specific destination
-  const scrollTo = (destination: number) => {
-    'worklet';
-    translateY.value = withTiming(destination, SLIDE_CONFIG);
-  };
+  const scrollTo = useCallback(
+    (destination: number) => {
+      'worklet';
+      // eslint-disable-next-line react-hooks/immutability
+      translateY.value = withTiming(destination, SLIDE_CONFIG);
+    },
+    [translateY]
+  );
 
   // --- START: NEW KEYBOARD HANDLING LOGIC ---
   useEffect(() => {
@@ -195,7 +215,7 @@ export function BottomSheet({
       }
       scrollTo(destination);
     }
-  }, [keyboardHeight, isKeyboardVisible, isVisible]);
+  }, [keyboardHeight, isKeyboardVisible, isVisible, currentSnapIndex.value, keyboardHeightSV, scrollTo, snapPointsHeights]);
   // --- END: NEW KEYBOARD HANDLING LOGIC ---
 
   const findClosestSnapPoint = (currentY: number) => {
@@ -216,12 +236,14 @@ export function BottomSheet({
         closestIndex = i;
       }
     }
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value, mutated via `.value` outside React's render cycle by design.
     currentSnapIndex.value = closestIndex;
     return closest;
   };
 
   const handlePress = () => {
     const nextIndex = (currentSnapIndex.value + 1) % snapPointsHeights.length;
+    // eslint-disable-next-line react-hooks/immutability
     currentSnapIndex.value = nextIndex;
     const destination = snapPointsHeights[nextIndex] - keyboardHeightSV.value;
     scrollTo(destination);
@@ -229,7 +251,9 @@ export function BottomSheet({
 
   const animateClose = () => {
     'worklet';
+    // eslint-disable-next-line react-hooks/immutability
     translateY.value = withTiming(0, SLIDE_CONFIG_CLOSE);
+    // eslint-disable-next-line react-hooks/immutability
     opacity.value = withTiming(0, { duration: 300 }, (finished) => {
       if (finished) {
         runOnJS(onClose)();
@@ -244,6 +268,7 @@ export function BottomSheet({
     .onUpdate((event) => {
       const newY = context.value.y + event.translationY;
       if (newY <= 0 && newY >= MAX_TRANSLATE_Y) {
+        // eslint-disable-next-line react-hooks/immutability
         translateY.value = newY;
       }
     })

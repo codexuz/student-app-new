@@ -1,80 +1,68 @@
-import { Platform } from 'react-native';
+import { Icon } from '@/components/ui/icon';
 import { useColor } from '@/hooks/useColor';
-import MaterialIcons from '@expo/vector-icons/Feather';
-// `Icon`, `Label`, `Badge` and `VectorIcon` are statics on `NativeTabs.Trigger`
-// rather than top-level exports of this module — they were removed as named
-// exports in expo-router 57 and importing them by name throws at runtime.
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Tabs } from 'expo-router';
+import { BookOpenCheck, ChartNoAxesColumn, Home, ShoppingBag, User } from 'lucide-react-native';
 
-const { Icon, Label, VectorIcon } = NativeTabs.Trigger;
-
+// `expo-router/unstable-native-tabs` mounts every tab's screen unconditionally
+// at launch and never releases them — `isFocused` there only gates
+// `pointerEvents`, not rendering (see NativeTabsView.shared.js's
+// `ScreenContent`, which calls `contentRenderer()` for every tab regardless of
+// focus). With five content-heavy tabs all resident in memory simultaneously,
+// that was ballooning the app to ~4GB and getting it killed by iOS (jetsam
+// "highwater") within seconds of launch. The stable `Tabs` below wraps
+// `@react-navigation/bottom-tabs`, which is lazy by default — a tab's screen
+// only mounts the first time it's actually visited.
 export default function TabsLayout() {
   const primary = useColor('primary');
   const foreground = useColor('foreground');
 
   return (
-    <NativeTabs
-      minimizeBehavior='onScrollDown'
-      labelStyle={{
-        default: { color: primary },
-        selected: { color: foreground },
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: foreground,
+        tabBarInactiveTintColor: primary,
       }}
-      iconColor={{
-        default: primary,
-        selected: foreground,
-      }}
-      labelVisibilityMode='labeled'
-      disableTransparentOnScrollEdge={true}
     >
-      <NativeTabs.Trigger name='(home)'>
-        {Platform.select({
-          ios: <Icon sf='house.fill' />,
-          android: (
-            <Icon src={<VectorIcon family={MaterialIcons} name='home' />} />
-          ),
-        })}
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
+      <Tabs.Screen
+        name='(home)'
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color }) => <Icon name={Home} size={24} color={color} />,
+        }}
+      />
 
-      <NativeTabs.Trigger name='grades'>
-        {Platform.select({
-          ios: <Icon sf='graduationcap.fill' />,
-          android: (
-            <Icon src={<VectorIcon family={MaterialIcons} name='award' />} />
-          ),
-        })}
-        <Label>Grades</Label>
-      </NativeTabs.Trigger>
+      <Tabs.Screen
+        name='grades'
+        options={{
+          title: 'Grades',
+          tabBarIcon: ({ color }) => <Icon name={BookOpenCheck} size={24} color={color} />,
+        }}
+      />
 
-      <NativeTabs.Trigger name='shop'>
-        {Platform.select({
-          ios: <Icon sf='bag.fill' />,
-          android: (
-            <Icon src={<VectorIcon family={MaterialIcons} name='shopping-bag' />} />
-          ),
-        })}
-        <Label>Shop</Label>
-      </NativeTabs.Trigger>
+      <Tabs.Screen
+        name='shop'
+        options={{
+          title: 'Shop',
+          tabBarIcon: ({ color }) => <Icon name={ShoppingBag} size={24} color={color} />,
+        }}
+      />
 
-      <NativeTabs.Trigger name='progress'>
-        {Platform.select({
-          ios: <Icon sf='trophy.fill' />,
-          android: (
-            <Icon src={<VectorIcon family={MaterialIcons} name='bar-chart-2' />} />
-          ),
-        })}
-        <Label>Leaderboard</Label>
-      </NativeTabs.Trigger>
+      <Tabs.Screen
+        name='progress'
+        options={{
+          title: 'Leaderboard',
+          tabBarIcon: ({ color }) => <Icon name={ChartNoAxesColumn} size={24} color={color} />,
+        }}
+      />
 
-      <NativeTabs.Trigger name='profile'>
-        {Platform.select({
-          ios: <Icon sf='person.crop.circle.fill' />,
-          android: (
-            <Icon src={<VectorIcon family={MaterialIcons} name='user' />} />
-          ),
-        })}
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+      <Tabs.Screen
+        name='profile'
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <Icon name={User} size={24} color={color} />,
+        }}
+      />
+    </Tabs>
   );
 }

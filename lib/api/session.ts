@@ -76,9 +76,23 @@ export async function updateSessionUser(patch: Partial<AuthUser>): Promise<void>
 }
 
 export async function clearSession(): Promise<void> {
+  // Flip in-memory state and notify listeners first — this is what actually
+  // drives the UI into the signed-out state. If it ran after the storage
+  // clear below and that clear rejected (seen on iOS: Keychain access can
+  // throw after a re-signed TestFlight/App Store build), `emit()` would
+  // never fire and `useSyncExternalStore` subscribers would stay on the
+  // stale authenticated snapshot forever — sign-out would silently do
+  // nothing from the UI's perspective.
   session = null;
-  await clearStoredSession();
   emit();
+
+  try {
+    await clearStoredSession();
+  } catch {
+    // Best-effort, same as the network call in `authApi.logout()` — a
+    // failed on-disk clear doesn't matter since the next login overwrites
+    // whatever's left there.
+  }
 }
 
 // Start hydrating as soon as this module is imported (from `AuthProvider`),

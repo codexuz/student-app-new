@@ -98,6 +98,7 @@ export default function ProfileScreen() {
   const background = useColor('background');
   const text = useColor('text');
   const [isUploading, setIsUploading] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   // Profile only ever mounts once `user` is resolved, so this reflects
   // whether there's anything to fetch right from the first render — no need
@@ -227,9 +228,27 @@ export default function ProfileScreen() {
   };
 
   const confirmSignOut = async () => {
-    signOutSheet.close();
-    await signOut();
-    router.replace('/sign-in');
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      // No manual navigation here on purpose. `Stack.Protected` in the root
+      // layout swaps the whole tree to the `(auth)` group as soon as
+      // `isAuthenticated` flips to false — racing that automatic swap with
+      // an imperative `router.replace`/`push` call while the protected
+      // stack is mid-teardown is what was crashing sign-out on iOS and
+      // occasionally leaving the app stuck on this screen.
+      signOutSheet.close();
+    } catch (error) {
+      if (__DEV__) console.error('Sign out failed:', error);
+      signOutSheet.close();
+      toast.error(
+        'Sign out failed',
+        error instanceof ApiError || error instanceof Error ? error.message : 'Please try again.'
+      );
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   const handleRateApp = async () => {
@@ -514,10 +533,22 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <View style={{ gap: SPACING.sm }}>
-            <Button variant='destructive' size='lg' onPress={confirmSignOut} style={{ width: '100%' }}>
+            <Button
+              variant='destructive'
+              size='lg'
+              onPress={confirmSignOut}
+              loading={isSigningOut}
+              style={{ width: '100%' }}
+            >
               Sign Out
             </Button>
-            <Button variant='secondary' size='lg' onPress={signOutSheet.close} style={{ width: '100%' }}>
+            <Button
+              variant='secondary'
+              size='lg'
+              onPress={signOutSheet.close}
+              disabled={isSigningOut}
+              style={{ width: '100%' }}
+            >
               Cancel
             </Button>
           </View>

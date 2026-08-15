@@ -78,7 +78,7 @@ export default function SignInScreen() {
         </Svg>
 
         <Image
-          source={require('@/assets/images/logo/logo white.png')}
+          source={require('@/assets/images/logo/logo_white.png')}
           style={[styles.logo, { marginTop: insets.top }]}
           resizeMode='contain'
         />

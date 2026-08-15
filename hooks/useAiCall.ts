@@ -92,6 +92,9 @@ export function useAiCall(): UseAiCallResult {
 
   // Loop the connecting tone while waiting for the backend to start the call.
   useEffect(() => {
+    // `useAudioPlayer` doesn't expose a `loop` constructor option — mutating
+    // the returned player's property is the library's actual API surface.
+    // eslint-disable-next-line react-hooks/immutability
     connectingTone.loop = true;
     if (phase === 'connecting') {
       try { connectingTone.seekTo(0); connectingTone.play(); } catch {}
@@ -135,6 +138,7 @@ export function useAiCall(): UseAiCallResult {
   const recordingRef = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamingOptsRef = useRef<any>(null);
+
 
   const stopMic = useCallback(async () => {
     if (recordingRef.current) {
@@ -297,6 +301,40 @@ export function useAiCall(): UseAiCallResult {
     }, 1000);
   }, [stopCountdown, teardown]);
 
+  // Open the mic and stream upsampled PCM16 chunks to the backend. The opts
+  // are saved to streamingOptsRef so resumeMic can restart with the same config.
+  // Declared before the socket-listener effect below since its
+  // `ai-call:started` handler calls it.
+  const beginStreaming = useCallback(async () => {
+    recordingRef.current = true;
+
+    const callbackOptions = {
+      sampleRate: MIC_SAMPLE_RATE,
+      bufferLength: 4096,
+      channelCount: 1,
+    };
+
+    const onAudioReadyCallback = (event: { buffer: { getChannelData(ch: number): Float32Array } }) => {
+      if (!recordingRef.current || mutedRef.current) return;
+      const callId = callIdRef.current;
+      if (!callId) return;
+
+      const pcm16k = float32ToInt16(event.buffer.getChannelData(0));
+      const pcm24k = resamplePcm16(pcm16k, MIC_SAMPLE_RATE, REALTIME_SAMPLE_RATE);
+      socketRef.current?.emit('ai-call:audio', {
+        call_id: callId,
+        audio: bytesToBase64(int16ToBytes(pcm24k)),
+      });
+    };
+
+    streamingOptsRef.current = { callbackOptions, onAudioReadyCallback };
+
+    const rec = new AudioRecorder();
+    rec.onAudioReady(callbackOptions, onAudioReadyCallback);
+    recorderRef.current = rec;
+    rec.start();
+  }, []);
+
   // Socket listeners for the AI call lifecycle.
   useEffect(() => {
     let mounted = true;
@@ -368,38 +406,6 @@ export function useAiCall(): UseAiCallResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Open the mic and stream upsampled PCM16 chunks to the backend. The opts
-  // are saved to streamingOptsRef so resumeMic can restart with the same config.
-  const beginStreaming = useCallback(async () => {
-    recordingRef.current = true;
-
-    const callbackOptions = {
-      sampleRate: MIC_SAMPLE_RATE,
-      bufferLength: 4096,
-      channelCount: 1,
-    };
-
-    const onAudioReadyCallback = (event: { buffer: { getChannelData(ch: number): Float32Array } }) => {
-      if (!recordingRef.current || mutedRef.current) return;
-      const callId = callIdRef.current;
-      if (!callId) return;
-
-      const pcm16k = float32ToInt16(event.buffer.getChannelData(0));
-      const pcm24k = resamplePcm16(pcm16k, MIC_SAMPLE_RATE, REALTIME_SAMPLE_RATE);
-      socketRef.current?.emit('ai-call:audio', {
-        call_id: callId,
-        audio: bytesToBase64(int16ToBytes(pcm24k)),
-      });
-    };
-
-    streamingOptsRef.current = { callbackOptions, onAudioReadyCallback };
-
-    const rec = new AudioRecorder();
-    rec.onAudioReady(callbackOptions, onAudioReadyCallback);
-    recorderRef.current = rec;
-    rec.start();
-  }, []);
-
   const start = useCallback(
     async (opts?: { instructions?: string; voice?: string }) => {
       setError(null);
@@ -415,21 +421,32 @@ export function useAiCall(): UseAiCallResult {
         return;
       }
 
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        // record + playback in the same session for full-duplex feel
-        allowsRecording: true,
-        // Force speaker output; .playAndRecord defaults to the earpiece, which
-        // makes the AI's voice inaudible.
-        shouldRouteThroughEarpiece: false,
-      });
+      try {
+        // On iOS this calls through to `AVAudioSession.setCategory`, which is a
+        // real native call that can throw (session conflicts, routing state,
+        // etc — see the AVAudioSession-ownership fight with react-native-audio-api
+        // noted above). Unlike every other `setAudioModeAsync` call in this file,
+        // this one previously wasn't guarded, and `start()` is invoked
+        // fire-and-forget by callers — an uncaught rejection here left the call
+        // stuck on "connecting" forever with no visible error, iOS-only.
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          // record + playback in the same session for full-duplex feel
+          allowsRecording: true,
+          // Force speaker output; .playAndRecord defaults to the earpiece, which
+          // makes the AI's voice inaudible.
+          shouldRouteThroughEarpiece: false,
+        });
 
-      const socket = await getCallSocket();
-      socketRef.current = socket;
-      socket.emit('ai-call:start', {
-        instructions: opts?.instructions,
-        voice: opts?.voice,
-      });
+        const socket = await getCallSocket();
+        socketRef.current = socket;
+        socket.emit('ai-call:start', {
+          instructions: opts?.instructions,
+          voice: opts?.voice,
+        });
+      } catch {
+        teardown('Could not start the call. Please try again.');
+      }
     },
     [teardown],
   );

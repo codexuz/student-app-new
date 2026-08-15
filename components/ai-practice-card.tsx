@@ -55,7 +55,7 @@ export function AiPracticeCard({
     shadowOpacity: glow.value,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
+    elevation: 0,
   }));
 
   return (
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
   glowWrap: {
     height: CARD_HEIGHT,
     borderRadius: CARD_RADIUS,
+    elevation: 0,
   },
   pressable: {
     flex: 1,
