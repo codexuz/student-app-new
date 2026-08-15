@@ -80,7 +80,6 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.2",
-    "react-native-audio-api": "^0.13.2",
     "react-native-circular-progress": "^1.4.1",
     "react-native-dropdown-select-list": "^2.0.5",
     "react-native-fast-confetti": "^2.0.2",

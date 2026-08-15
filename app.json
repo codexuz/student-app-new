@@ -69,7 +69,9 @@
           },
           "android": {
             "usesCleartextTraffic": true,
-            "minSdkVersion": 24
+            "minSdkVersion": 24,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ],
@@ -115,8 +117,7 @@
       "expo-asset",
       "expo-image",
       "expo-sharing",
-      "expo-web-browser",
-      "react-native-audio-api"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
