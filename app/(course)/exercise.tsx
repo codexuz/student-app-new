@@ -240,6 +240,7 @@ export default function ExerciseRunnerScreen() {
 
         {currentAnswer && (
           <QuestionRenderer
+            key={currentQuestion.id}
             question={currentQuestion}
             value={currentAnswer}
             onChange={(value) => setAnswers((prev) => ({ ...prev, [currentIndex]: value }))}
