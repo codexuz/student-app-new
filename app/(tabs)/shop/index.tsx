@@ -214,7 +214,7 @@ export default function ShopScreen() {
               {selectedItem.name}
             </Text>
             <View style={styles.confirmPriceRow}>
-              <Image source={require('@/assets/images/coin.png')} style={styles.coinIconLg} contentFit='contain' />
+              <Image source={require('@/assets/images/coin-noanimted.png')} style={styles.coinIconLg} contentFit='contain' />
               <Text style={[styles.confirmPrice, { color: yellow }]}>{selectedItem.price} coins</Text>
             </View>
             {!canAfford && (

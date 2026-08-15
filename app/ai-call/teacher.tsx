@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AiCallConfirmSheet } from '@/components/ai-call/AiCallConfirmSheet';
 import { AiCallSettingsSheet } from '@/components/ai-call/AiCallSettingsSheet';
@@ -126,6 +126,7 @@ export default function AiCallTeacherScreen() {
     phase,
     aiTranscript,
     error,
+    permissionBlocked,
     secondsLeft,
     muted,
     mouthOpen,
@@ -160,13 +161,15 @@ export default function AiCallTeacherScreen() {
   };
 
   useEffect(() => {
-    if (phase === 'ended') {
+    // Skip the auto-back when the mic is permanently blocked — the user
+    // needs the "Open Settings" button below, not to get bounced out.
+    if (phase === 'ended' && !permissionBlocked) {
       const id = setTimeout(() => {
         if (router.canGoBack()) router.back();
       }, 1800);
       return () => clearTimeout(id);
     }
-  }, [phase]);
+  }, [phase, permissionBlocked]);
 
   const handleEnd = () => {
     end();
@@ -236,6 +239,15 @@ export default function AiCallTeacherScreen() {
         <Text style={[styles.phase, { color: '#fff' }]}>
           {error ? error : PHASE_LABEL[phase]}
         </Text>
+        {permissionBlocked && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => Linking.openSettings()}
+            style={styles.settingsBtn}
+          >
+            <Text style={styles.settingsBtnText}>Open Settings</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -368,6 +380,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   phase: { fontSize: 17, marginTop: 28, fontWeight: '600' },
+  settingsBtn: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  settingsBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   transcripts: { flex: 1, paddingHorizontal: 20, marginTop: 16 },
   bubble: { borderRadius: 16, padding: 14, marginBottom: 12, overflow: 'hidden' },
   bubbleRole: { fontSize: 12, fontWeight: '600', marginBottom: 4 },

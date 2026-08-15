@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { Image, Pressable, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import LottieView, { type AnimationObject } from 'lottie-react-native';
 
 import { StreakCalendarSheet } from '@/components/streak-calendar-sheet';
@@ -20,12 +20,21 @@ interface AutoPlayLottieProps {
 // `autoPlay` on LottieView can silently no-op if the view mounts before its
 // native layer is measured (common inside nested flex rows) — kicking off
 // `.play()` from an effect after mount is the reliable way to start it.
+//
+// Home is a native tab, so this component stays mounted in the background
+// for the whole session even while another tab is active. A `loop` animation
+// left running off-screen indefinitely holds native render resources for as
+// long as the app runs — pausing on blur and resuming on focus keeps it from
+// accumulating that way.
 function AutoPlayLottie({ source, style, loop = true }: AutoPlayLottieProps) {
   const ref = useRef<LottieView>(null);
 
-  useEffect(() => {
-    ref.current?.play();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      ref.current?.play();
+      return () => ref.current?.pause();
+    }, [])
+  );
 
   return <LottieView ref={ref} source={source} loop={loop} style={style} />;
 }
@@ -101,7 +110,7 @@ export function HomeHeader({ firstName, avatarUrl, streak, coins, statsLoading }
             <Text variant='caption' style={{color: foreground, fontWeight: 600}}>Hello,</Text>
             <AutoPlayLottie
               source={require('@/assets/animations/wave.json')}
-              style={styles.waveLottie}
+              style={styles.waveImage}
               loop={false}
             />
           </View>
@@ -194,7 +203,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  waveLottie: {
+  waveImage: {
     width: 20,
     height: 20,
     marginLeft: 2,

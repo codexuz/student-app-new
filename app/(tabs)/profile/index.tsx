@@ -183,9 +183,20 @@ export default function ProfileScreen() {
   const pickImage = async (source: 'camera' | 'library') => {
     try {
       if (source === 'camera') {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-          toast.warning('Permission needed', 'Camera access is required to take a photo.');
+          // Once iOS has already recorded a "denied" answer, asking again just
+          // resolves instantly with no system prompt — point at Settings instead.
+          if (!canAskAgain) {
+            toast.toast({
+              variant: 'warning',
+              title: 'Camera access is off',
+              description: 'Enable camera access in Settings to take a photo.',
+              action: { label: 'Open Settings', onPress: () => Linking.openSettings() },
+            });
+          } else {
+            toast.warning('Permission needed', 'Camera access is required to take a photo.');
+          }
           return;
         }
       }

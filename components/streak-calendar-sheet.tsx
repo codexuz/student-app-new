@@ -81,18 +81,34 @@ export function StreakCalendarSheet({ isVisible, onClose, streak }: StreakCalend
   const [activeDates, setActiveDates] = useState<Set<string>>(new Set());
   const [isLoadingDates, setIsLoadingDates] = useState(true);
 
-  useEffect(() => {
-    if (!isVisible) return;
-    // Reset to the current month each time the sheet is reopened.
-    setYear(now.getFullYear());
-    setMonth(now.getMonth() + 1);
-  }, [isVisible]);
+  // Reset to the current month each time the sheet is reopened. Adjusting
+  // state during render on a prop transition (rather than in an effect)
+  // resolves before paint instead of causing an extra post-commit render.
+  // Tracked with `useState` rather than a ref — React Compiler (enabled for
+  // this project) disallows reading refs during render.
+  const [prevVisible, setPrevVisible] = useState(isVisible);
+  if (prevVisible !== isVisible) {
+    setPrevVisible(isVisible);
+    if (isVisible) {
+      setYear(now.getFullYear());
+      setMonth(now.getMonth() + 1);
+    }
+  }
+
+  // Same pattern for the loading flag: flip it back on as soon as the fetch
+  // key (which user/month we're about to load) changes, rather than
+  // synchronously inside the effect that kicks off the request below.
+  const fetchKey = isVisible && user?.user_id ? `${user.user_id}:${year}:${month}` : null;
+  const [prevFetchKey, setPrevFetchKey] = useState<string | null>(null);
+  if (prevFetchKey !== fetchKey) {
+    setPrevFetchKey(fetchKey);
+    if (fetchKey) setIsLoadingDates(true);
+  }
 
   useEffect(() => {
     if (!isVisible || !user?.user_id) return;
     let isMounted = true;
 
-    setIsLoadingDates(true);
     getStreakCalendar(user.user_id, year, month)
       .then((days) => {
         if (isMounted) setActiveDates(new Set(days.map((d) => d.active_date.slice(0, 10))));

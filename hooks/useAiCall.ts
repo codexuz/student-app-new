@@ -45,6 +45,9 @@ interface UseAiCallResult {
   aiTranscript: string;
   userTranscript: string;
   error: string | null;
+  /** True when the mic permission is denied AND iOS won't show the system
+   * prompt again — the only way forward is the Settings app. */
+  permissionBlocked: boolean;
   /** Seconds remaining before the 15-minute limit ends the call. */
   secondsLeft: number;
   /** When true, the mic is muted and no audio is sent to the AI. */
@@ -73,6 +76,7 @@ export function useAiCall(): UseAiCallResult {
   const [aiTranscript, setAiTranscript] = useState('');
   const [userTranscript, setUserTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [permissionBlocked, setPermissionBlocked] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(AI_CALL_LIMIT_SECONDS);
   const [muted, setMuted] = useState(false);
   const [mouthOpen, setMouthOpen] = useState(0);
@@ -409,6 +413,7 @@ export function useAiCall(): UseAiCallResult {
   const start = useCallback(
     async (opts?: { instructions?: string; voice?: string }) => {
       setError(null);
+      setPermissionBlocked(false);
       setAiTranscript('');
       setUserTranscript('');
       mutedRef.current = false;
@@ -417,7 +422,16 @@ export function useAiCall(): UseAiCallResult {
 
       const perm = await requestRecordingPermissionsAsync();
       if (!perm.granted) {
-        teardown('Microphone permission denied');
+        // Once iOS has already recorded a "denied" answer for this permission,
+        // requesting it again resolves instantly with no system prompt — the
+        // call just silently fails to connect unless we point the user at
+        // Settings instead of retrying the same no-op request.
+        setPermissionBlocked(!perm.canAskAgain);
+        teardown(
+          perm.canAskAgain
+            ? 'Microphone permission denied'
+            : 'Microphone access is off. Enable it in Settings to start the call.'
+        );
         return;
       }
 
@@ -470,6 +484,7 @@ export function useAiCall(): UseAiCallResult {
     aiTranscript,
     userTranscript,
     error,
+    permissionBlocked,
     secondsLeft,
     muted,
     mouthOpen,
