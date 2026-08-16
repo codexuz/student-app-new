@@ -25,6 +25,7 @@ import { Text } from '@/components/ui/text';
 import { useToast } from '@/components/ui/toast';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
+import { useDisableSwipeBackWhileFocused } from '@/hooks/useDisableSwipeBackWhileFocused';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { ApiError } from '@/lib/api/client';
 import type { Exercise, ExerciseSubmissionSummary, WritingAssessment } from '@/lib/api/curriculum-types';
@@ -247,6 +248,7 @@ export default function WritingScreen() {
   const [focused, setFocused] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<WritingResult | null>(initialResult);
+  const swipeBackGuard = useDisableSwipeBackWhileFocused();
 
   useEffect(() => {
     if (!exerciseId) return;
@@ -355,8 +357,14 @@ export default function WritingScreen() {
           textAlignVertical='top'
           placeholder='Write your response…'
           placeholderTextColor={muted}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => {
+            setFocused(true);
+            swipeBackGuard.onFocus();
+          }}
+          onBlur={() => {
+            setFocused(false);
+            swipeBackGuard.onBlur();
+          }}
           style={[styles.input, { backgroundColor: card, color: text, borderColor: focused ? primary : border }]}
         />
 

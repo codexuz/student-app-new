@@ -56,6 +56,11 @@ export function AiPracticeCard({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 0 },
     elevation: 0,
+    // iOS only carves the shadow to `borderRadius` when this view actually
+    // paints something opaque — otherwise it casts a square bounding-box
+    // shadow behind the rounded gradient card, showing as a hard-edged
+    // "layer" peeking out past the corners.
+    backgroundColor: colors[0],
   }));
 
   return (

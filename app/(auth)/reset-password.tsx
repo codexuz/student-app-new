@@ -13,6 +13,7 @@ import { Text } from '@/components/ui/text';
 import { useToast } from '@/components/ui/toast';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
+import { useDisableSwipeBackWhileFocused } from '@/hooks/useDisableSwipeBackWhileFocused';
 import { ApiError } from '@/lib/api/client';
 import { confirmPasswordReset } from '@/lib/api/auth';
 import { SPACING } from '@/theme/globals';
@@ -33,6 +34,7 @@ export default function ResetPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const swipeBackGuard = useDisableSwipeBackWhileFocused();
 
   const passwordsMatch = confirmPassword.length > 0 && newPassword === confirmPassword;
 
@@ -96,6 +98,8 @@ export default function ResetPasswordScreen() {
             secureTextEntry={!showPassword}
             value={newPassword}
             onChangeText={setNewPassword}
+            onFocus={swipeBackGuard.onFocus}
+            onBlur={swipeBackGuard.onBlur}
             rightComponent={
               <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
                 <Icon name={showPassword ? EyeOff : Eye} size={18} color={muted} />
@@ -110,6 +114,8 @@ export default function ResetPasswordScreen() {
             secureTextEntry={!showConfirmPassword}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
+            onFocus={swipeBackGuard.onFocus}
+            onBlur={swipeBackGuard.onBlur}
             rightComponent={
               <Pressable onPress={() => setShowConfirmPassword((v) => !v)} hitSlop={8}>
                 <Icon name={showConfirmPassword ? EyeOff : Eye} size={18} color={muted} />

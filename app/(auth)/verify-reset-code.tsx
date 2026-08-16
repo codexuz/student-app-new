@@ -13,6 +13,7 @@ import { Text } from '@/components/ui/text';
 import { useToast } from '@/components/ui/toast';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
+import { useDisableSwipeBackWhileFocused } from '@/hooks/useDisableSwipeBackWhileFocused';
 import { ApiError } from '@/lib/api/client';
 import { requestPasswordReset, verifyResetCode } from '@/lib/api/auth';
 import { SPACING } from '@/theme/globals';
@@ -31,6 +32,7 @@ export default function VerifyResetCodeScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN);
+  const swipeBackGuard = useDisableSwipeBackWhileFocused();
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -109,6 +111,8 @@ export default function VerifyResetCodeScreen() {
           onChangeText={setCode}
           onComplete={handleVerify}
           containerStyle={styles.otpContainer}
+          onFocus={swipeBackGuard.onFocus}
+          onBlur={swipeBackGuard.onBlur}
         />
 
         <Button

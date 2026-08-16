@@ -13,6 +13,7 @@ import { Text } from '@/components/ui/text';
 import { useToast } from '@/components/ui/toast';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
+import { useDisableSwipeBackWhileFocused } from '@/hooks/useDisableSwipeBackWhileFocused';
 import { ApiError } from '@/lib/api/client';
 import { requestPasswordReset } from '@/lib/api/auth';
 import { digitsOnly, formatNationalNumber, isCompleteNationalNumber, toE164 } from '@/lib/phone';
@@ -25,6 +26,7 @@ export default function ForgotPasswordScreen() {
 
   const [digits, setDigits] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const swipeBackGuard = useDisableSwipeBackWhileFocused();
 
   const canSubmit = isCompleteNationalNumber(digits);
 
@@ -81,6 +83,8 @@ export default function ForgotPasswordScreen() {
             maxLength={12}
             value={formatNationalNumber(digits)}
             onChangeText={(value) => setDigits(digitsOnly(value))}
+            onFocus={swipeBackGuard.onFocus}
+            onBlur={swipeBackGuard.onBlur}
           />
 
           <Button size='lg' style={styles.submitButton} loading={isSubmitting} onPress={handleSendCode}>

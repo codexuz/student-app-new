@@ -5,6 +5,7 @@ import { useInAppUpdates } from '@/hooks/useInAppUpdates';
 import { useNotifications } from '@/hooks/useNotifications';
 import { hasSeenOnboarding } from '@/lib/onboarding';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { MediaPermissionProvider } from '@/providers/media-permission-provider';
 import {
   NotificationPermissionProvider,
   useNotificationPermission,
@@ -46,7 +47,9 @@ export default function RootLayout() {
             <ToastProvider>
               <AuthProvider>
                 <NotificationPermissionProvider>
-                  <RootNavigator />
+                  <MediaPermissionProvider>
+                    <RootNavigator />
+                  </MediaPermissionProvider>
                 </NotificationPermissionProvider>
               </AuthProvider>
             </ToastProvider>

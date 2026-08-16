@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { useToast } from '@/components/ui/toast';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
+import { useDisableSwipeBackWhileFocused } from '@/hooks/useDisableSwipeBackWhileFocused';
 import { ApiError } from '@/lib/api/client';
 import { updateProfile } from '@/lib/api/users';
 import { useAuth } from '@/providers/auth-provider';
@@ -28,6 +29,7 @@ export default function EditProfileScreen() {
   const [firstName, setFirstName] = useState(user?.first_name ?? '');
   const [lastName, setLastName] = useState(user?.last_name ?? '');
   const [isSaving, setIsSaving] = useState(false);
+  const swipeBackGuard = useDisableSwipeBackWhileFocused();
 
   const hasChanges =
     username.trim() !== (user?.username ?? '') ||
@@ -97,6 +99,8 @@ export default function EditProfileScreen() {
             value={username}
             onChangeText={setUsername}
             autoCapitalize='none'
+            onFocus={swipeBackGuard.onFocus}
+            onBlur={swipeBackGuard.onBlur}
           />
 
           <Input
@@ -105,6 +109,8 @@ export default function EditProfileScreen() {
             value={firstName}
             onChangeText={setFirstName}
             autoCapitalize='words'
+            onFocus={swipeBackGuard.onFocus}
+            onBlur={swipeBackGuard.onBlur}
           />
 
           <Input
@@ -113,6 +119,8 @@ export default function EditProfileScreen() {
             value={lastName}
             onChangeText={setLastName}
             autoCapitalize='words'
+            onFocus={swipeBackGuard.onFocus}
+            onBlur={swipeBackGuard.onBlur}
           />
 
           <Button
