@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { useNavigation } from 'expo-router';
 
@@ -25,24 +25,29 @@ import { useNavigation } from 'expo-router';
 export function useDisableSwipeBackWhileFocused() {
   const navigation = useNavigation();
   const [focusedCount, setFocusedCount] = useState(0);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !isMountedRef.current) return;
+    navigation.setOptions({ gestureEnabled: focusedCount === 0 });
+  }, [focusedCount, navigation]);
 
   const onFocus = useCallback(() => {
     if (Platform.OS !== 'android') return;
-    setFocusedCount((count) => {
-      const next = count + 1;
-      if (next === 1) navigation.setOptions({ gestureEnabled: false });
-      return next;
-    });
-  }, [navigation]);
+    setFocusedCount((count) => count + 1);
+  }, []);
 
   const onBlur = useCallback(() => {
     if (Platform.OS !== 'android') return;
-    setFocusedCount((count) => {
-      const next = Math.max(0, count - 1);
-      if (next === 0) navigation.setOptions({ gestureEnabled: true });
-      return next;
-    });
-  }, [navigation]);
+    setFocusedCount((count) => Math.max(0, count - 1));
+  }, []);
 
   return { onFocus, onBlur };
 }
