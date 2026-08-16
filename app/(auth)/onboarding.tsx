@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Dimensions, Image, StyleSheet } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Extrapolation,
@@ -119,7 +120,7 @@ export default function OnboardingScreen() {
           onSnapToItem={setActiveIndex}
           renderItem={({ item }) => (
             <View style={styles.slide}>
-              <Image source={item.image} style={styles.image} resizeMode='contain' />
+              <Image source={item.image} style={styles.image} contentFit='contain' />
               <Text variant='title' style={styles.slideTitle}>
                 {item.title}
               </Text>

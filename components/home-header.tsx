@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { Image, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import LottieView, { type AnimationObject } from 'lottie-react-native';
 
@@ -100,7 +101,7 @@ export function HomeHeader({ firstName, avatarUrl, streak, coins, statsLoading }
       <View style={styles.identity}>
         <View style={[styles.avatar, { backgroundColor: primary }]}>
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} contentFit='cover' />
           ) : (
             <Text style={styles.avatarLetter}>{avatarLetter}</Text>
           )}

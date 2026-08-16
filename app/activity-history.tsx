@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { History, TrendingDown, TrendingUp } from 'lucide-react-native';
 
 import { Card } from '@/components/ui/card';
@@ -161,7 +162,7 @@ export default function ActivityHistoryScreen() {
                       <Image
                         source={require('@/assets/images/coin-noanimted.png')}
                         style={styles.coinIcon}
-                        resizeMode='contain'
+                        contentFit='contain'
                       />
                     ) : (
                       <Icon

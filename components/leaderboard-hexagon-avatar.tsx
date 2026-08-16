@@ -1,4 +1,5 @@
-import { Image, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Polygon } from 'react-native-svg';
 
 import { Text } from '@/components/ui/text';
@@ -46,7 +47,7 @@ export function LeaderboardHexagonAvatar({
 
       <View style={[styles.imageWrap, { width: size - strokeWidth * 4, height: size - strokeWidth * 4 }]}>
         {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.image} />
+          <Image source={{ uri: avatarUrl }} style={styles.image} contentFit='cover' />
         ) : (
           <View style={[styles.fallback, { backgroundColor: borderColor }]}>
             <Text style={[styles.fallbackText, { fontSize: size * 0.32 }]}>{fallbackLetter}</Text>

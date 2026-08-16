@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Linking,
   Platform,
   Pressable,
@@ -9,6 +8,7 @@ import {
   Share,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import type { LucideProps } from 'lucide-react-native';
@@ -50,6 +50,7 @@ import { getPaymentStatus, type PaymentStatus } from '@/lib/api/payments';
 import { uploadAvatar, type UploadableImage } from '@/lib/api/users';
 import { isAppReviewRestricted } from '@/lib/app-review-restrictions';
 import { useAuth } from '@/providers/auth-provider';
+import { useMediaPermission } from '@/providers/media-permission-provider';
 import { useNotificationPermission } from '@/providers/notification-permission-provider';
 import { usePreferences } from '@/providers/preferences-provider';
 import { SPACING } from '@/theme/globals';
@@ -89,6 +90,7 @@ export default function ProfileScreen() {
     usePreferences();
   const { mode, isDark, setMode } = useModeToggle();
   const { status: notificationStatus } = useNotificationPermission();
+  const { request: requestMediaPermission } = useMediaPermission();
   const primary = useColor('primary');
   const muted = useColor('textMuted');
   const border = useColor('border');
@@ -183,8 +185,8 @@ export default function ProfileScreen() {
   const pickImage = async (source: 'camera' | 'library') => {
     try {
       if (source === 'camera') {
-        const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
+        const { granted, canAskAgain } = await requestMediaPermission('camera');
+        if (!granted) {
           // Once iOS has already recorded a "denied" answer, asking again just
           // resolves instantly with no system prompt — point at Settings instead.
           if (!canAskAgain) {
@@ -433,7 +435,7 @@ export default function ProfileScreen() {
               disabled={isUploading}
             >
               {user?.avatar_url ? (
-                <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+                <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} contentFit='cover' />
               ) : (
                 <Text style={styles.avatarLetter}>{avatarLetter}</Text>
               )}

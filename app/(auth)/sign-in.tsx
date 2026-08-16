@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Dimensions, Image, Pressable, StyleSheet } from 'react-native';
+import { Dimensions, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Eye, EyeOff, Lock, Phone } from 'lucide-react-native';
@@ -82,7 +83,7 @@ export default function SignInScreen() {
         <Image
           source={require('@/assets/images/logo/logo_white.png')}
           style={[styles.logo, { marginTop: insets.top }]}
-          resizeMode='contain'
+          contentFit='contain'
         />
       </View>
 

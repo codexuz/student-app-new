@@ -3,7 +3,6 @@ import { Pressable, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import {
   RecordingPresets,
-  requestRecordingPermissionsAsync,
   setAudioModeAsync,
   useAudioRecorder,
   useAudioRecorderState,
@@ -38,6 +37,7 @@ import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { useMediaPermission } from '@/providers/media-permission-provider';
 import { ApiError } from '@/lib/api/client';
 import type { IeltsPart1Question, SpeakingAssessment, SpeakingResponse } from '@/lib/api/curriculum-types';
 import { transcribeAudio, uploadFile } from '@/lib/api/media';
@@ -296,11 +296,12 @@ export default function SpeakingQAScreen() {
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
+  const { ensure: ensureMediaPermission } = useMediaPermission();
 
   useEffect(() => {
-    requestRecordingPermissionsAsync();
+    ensureMediaPermission('microphone');
     setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-  }, []);
+  }, [ensureMediaPermission]);
 
   useEffect(() => {
     if (!speakingId) return;

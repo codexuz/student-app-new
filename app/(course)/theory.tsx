@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { Directory, File, Paths } from 'expo-file-system';
+import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import Markdown from 'react-native-markdown-display';
@@ -150,7 +151,7 @@ function ContentBlockView({ block }: { block: LessonContentBlock }) {
         </Markdown>
       );
     case 'image':
-      return <Image source={{ uri: block.content }} style={styles.image} resizeMode='contain' />;
+      return <Image source={{ uri: block.content }} style={styles.image} contentFit='contain' />;
     case 'audio':
       return <AudioHeroPlayer url={block.content} />;
     case 'video':

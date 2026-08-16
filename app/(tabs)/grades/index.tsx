@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import {
   ChevronLeft,
   ChevronRight,
@@ -293,7 +294,7 @@ function StudentAvatar({ student }: { student: GradingStudentRow }) {
   return (
     <View style={[styles.avatar, { backgroundColor: primary }]}>
       {student.avatar_url ? (
-        <Image source={{ uri: student.avatar_url }} style={styles.avatarImage} />
+        <Image source={{ uri: student.avatar_url }} style={styles.avatarImage} contentFit='cover' />
       ) : (
         <Text style={styles.avatarLetter}>{initial}</Text>
       )}

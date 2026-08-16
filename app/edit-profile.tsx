@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { AtSign, User } from 'lucide-react-native';
 
@@ -77,7 +78,7 @@ export default function EditProfileScreen() {
       >
         <View style={styles.avatar}>
           {user?.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+            <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} contentFit='cover' />
           ) : (
             <View style={[styles.avatarFallback, { backgroundColor: primary }]}>
               <Text style={styles.avatarLetter}>{avatarLetter}</Text>

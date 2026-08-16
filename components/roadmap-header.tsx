@@ -1,5 +1,6 @@
-import { Image, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { X } from 'lucide-react-native';
@@ -38,7 +39,7 @@ export function RoadmapHeader({ percentage }: RoadmapHeaderProps) {
         <CircularProgress percentage={percentage} size={92} strokeWidth={5} color='#fff' trackColor='rgba(255,255,255,0.2)'>
           <View style={styles.avatar}>
             {user?.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+              <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} contentFit='cover' />
             ) : (
               <Text style={styles.avatarLetter}>{avatarLetter}</Text>
             )}

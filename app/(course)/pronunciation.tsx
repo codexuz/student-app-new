@@ -3,7 +3,6 @@ import { StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   RecordingPresets,
-  requestRecordingPermissionsAsync,
   setAudioModeAsync,
   useAudioRecorder,
   useAudioRecorderState,
@@ -26,6 +25,7 @@ import type { PronunciationPhrase } from '@/lib/api/curriculum-types';
 import { transcribeAudio } from '@/lib/api/media';
 import { getPronunciationPhrases, submitSpeakingResponse } from '@/lib/api/speaking';
 import { useAuth } from '@/providers/auth-provider';
+import { useMediaPermission } from '@/providers/media-permission-provider';
 import { SPACING } from '@/theme/globals';
 
 interface FinishedState {
@@ -88,11 +88,12 @@ export default function PronunciationDrillScreen() {
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
+  const { ensure: ensureMediaPermission } = useMediaPermission();
 
   useEffect(() => {
-    requestRecordingPermissionsAsync();
+    ensureMediaPermission('microphone');
     setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-  }, []);
+  }, [ensureMediaPermission]);
 
   useEffect(() => {
     if (!speakingId) return;

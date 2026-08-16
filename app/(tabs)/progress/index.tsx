@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Zap } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,7 +108,7 @@ function RankRow({ row, rank, isCurrentUser }: { row: LeaderboardRow; rank: numb
       </View>
 
       {row.user.avatar_url ? (
-        <Image source={{ uri: row.user.avatar_url }} style={styles.rowAvatar} />
+        <Image source={{ uri: row.user.avatar_url }} style={styles.rowAvatar} contentFit='cover' />
       ) : (
         <View style={[styles.rowAvatar, styles.rowAvatarFallback, { backgroundColor: border }]}>
           <Text style={{ fontWeight: '700', color: text }}>

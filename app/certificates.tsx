@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
-  Image,
   Linking,
   Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Award, Download, ShieldCheck, X } from 'lucide-react-native';
 
 import { Spinner } from '@/components/ui/spinner';
@@ -96,7 +96,7 @@ export default function CertificatesScreen() {
             <Image
               source={require('@/assets/images/icons/premium/certificate.png')}
               style={styles.emptyImage}
-              resizeMode='contain'
+              contentFit='contain'
             />
             <Text variant='subtitle' style={styles.emptyTitle}>
               No Certificates Yet
@@ -115,7 +115,7 @@ export default function CertificatesScreen() {
               <Image
                 source={{ uri: item.certificate_url }}
                 style={styles.certificateImage}
-                resizeMode='cover'
+                contentFit='cover'
               />
               <View style={styles.ribbonBadge}>
                 <Award size={18} color='#FFD700' />
@@ -167,7 +167,7 @@ export default function CertificatesScreen() {
               <Image
                 source={{ uri: selected.certificate_url }}
                 style={styles.modalImage}
-                resizeMode='contain'
+                contentFit='contain'
               />
             )}
           </View>
