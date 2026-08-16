@@ -117,7 +117,8 @@
       "expo-asset",
       "expo-image",
       "expo-sharing",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withAndroidR8FullMode.js"
     ],
     "experiments": {
       "typedRoutes": true,
