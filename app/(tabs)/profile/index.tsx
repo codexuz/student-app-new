@@ -237,7 +237,12 @@ export default function ProfileScreen() {
 
   const handlePickFromSheet = (source: 'camera' | 'library') => {
     photoSheet.close();
-    void pickImage(source);
+    // The sheet's own Modal stays presented through its ~300ms close
+    // animation (see bottom-sheet.tsx) — launching the camera/library picker
+    // before that finishes means presenting one native modal while iOS is
+    // still mid-transition on another, which is a fatal (JS-uncatchable)
+    // crash on iOS. Wait for the close animation to finish first.
+    setTimeout(() => void pickImage(source), 350);
   };
 
   const confirmSignOut = async () => {

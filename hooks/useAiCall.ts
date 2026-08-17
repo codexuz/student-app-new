@@ -317,10 +317,21 @@ export function useAiCall(): UseAiCallResult {
   // Open the mic and start streaming PCM16 chunks to the backend via
   // `onStreamBuffer`. Declared before the socket-listener effect below since
   // its `ai-call:started` handler calls it.
+  //
+  // `stream.start()` is a real native call (AVAudioSession on iOS) that can
+  // throw if the session is still transitioning right after permission was
+  // just granted — e.g. while the connecting tone is still holding it. It's
+  // invoked from an async socket handler, so an uncaught throw here becomes
+  // an unhandled rejection, which is fatal in a production build.
   const beginStreaming = useCallback(async () => {
     recordingRef.current = true;
-    streamRef.current?.start();
-  }, []);
+    try {
+      streamRef.current?.start();
+    } catch {
+      recordingRef.current = false;
+      teardown('Could not access the microphone. Please try again.');
+    }
+  }, [teardown]);
 
   // Socket listeners for the AI call lifecycle.
   useEffect(() => {
