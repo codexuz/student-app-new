@@ -55,7 +55,7 @@ export default function SignInScreen() {
       router.replace('/');
     } catch (err) {
       const description =
-        err instanceof ApiError ? err.message : 'Invalid phone number or password.';
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again.';
       toast({ variant: 'error', title: 'Sign In Failed', description });
     } finally {
       setIsSubmitting(false);

@@ -8,6 +8,16 @@ import type { AuthUser, LoginResponse } from '@/lib/api/types';
 const PHONE_PATTERN = /^\+?\d+$/;
 
 /**
+ * HTTP header values must be ISO-8859-1 — device names can contain emoji or
+ * other unicode (common on newer Android builds), which makes OkHttp throw
+ * before the request ever reaches the network. Strip anything outside
+ * printable ASCII so the header stays valid.
+ */
+function sanitizeHeaderValue(value: string): string {
+  return value.replace(/[^\x20-\x7E]/g, '').trim();
+}
+
+/**
  * The login endpoint accepts either a username or a phone number under
  * different body keys — this is the one place that has to guess which the
  * user typed.
@@ -22,7 +32,9 @@ export async function login(identifier: string, password: string): Promise<AuthU
     method: 'POST',
     skipAuth: true,
     headers: {
-      'User-Agent': `${Device.deviceName ?? 'unknown-device'}, v${Device.osVersion ?? 'unknown'}`,
+      'User-Agent': sanitizeHeaderValue(
+        `${Device.deviceName ?? 'unknown-device'}, v${Device.osVersion ?? 'unknown'}`
+      ) || 'unknown-device',
     },
     body: {
       ...identifierBody(identifier),
