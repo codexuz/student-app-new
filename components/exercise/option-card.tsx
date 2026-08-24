@@ -42,13 +42,11 @@ export function OptionCard({ label, isCorrectOption, isSelected, showResult, onP
 
   const handlePressIn = () => {
     if (showResult) return;
-    // eslint-disable-next-line react-hooks/immutability
     scale.value = withTiming(0.97, { duration: 80, easing: Easing.out(Easing.quad) });
   };
 
   const handlePressOut = () => {
     if (showResult) return;
-    // eslint-disable-next-line react-hooks/immutability
     scale.value = withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) });
   };
 

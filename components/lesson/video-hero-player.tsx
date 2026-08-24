@@ -62,7 +62,7 @@ export function VideoHeroPlayer({ title, url }: VideoHeroPlayerProps) {
       return;
     }
     if (player.duration > 0 && currentTime >= player.duration) {
-      // eslint-disable-next-line react-hooks/immutability -- expo-video's documented seek API, see the scrubber's onSlidingComplete below.
+      // expo-video's documented seek API, see the scrubber's onSlidingComplete below.
       player.currentTime = 0;
     }
     player.play();
@@ -126,7 +126,6 @@ export function VideoHeroPlayer({ title, url }: VideoHeroPlayerProps) {
                 onSlidingComplete={(value) => {
                   // expo-video's documented seek API — assigning `currentTime` seeks the
                   // player, it isn't React state the compiler needs to track.
-                  // eslint-disable-next-line react-hooks/immutability
                   player.currentTime = value;
                 }}
               />

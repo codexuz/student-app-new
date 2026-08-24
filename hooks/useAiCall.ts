@@ -1,10 +1,9 @@
+import { AudioRecorder, AudioManager } from 'react-native-audio-api';
 import {
   createAudioPlayer,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
   useAudioPlayer,
-  useAudioStream,
-  type AudioStreamBuffer,
 } from 'expo-audio';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCallSocket, type CallSocket } from '@/lib/audioCall';
@@ -12,6 +11,7 @@ import {
   base64ToBytes,
   bytesToBase64,
   bytesToInt16,
+  float32ToInt16,
   int16ToBytes,
   MIC_SAMPLE_RATE,
   pcm16ToAmplitudeEnvelope,
@@ -96,7 +96,6 @@ export function useAiCall(): UseAiCallResult {
   useEffect(() => {
     // `useAudioPlayer` doesn't expose a `loop` constructor option — mutating
     // the returned player's property is the library's actual API surface.
-    // eslint-disable-next-line react-hooks/immutability
     connectingTone.loop = true;
     if (phase === 'connecting') {
       try { connectingTone.seekTo(0); connectingTone.play(); } catch {}
@@ -116,6 +115,15 @@ export function useAiCall(): UseAiCallResult {
     }
   }, [phase, connectedTone]);
 
+  // react-native-audio-api's AudioSessionManager defaults to AVAudioSessionCategoryPlayback.
+  // When its AVAudioEngine starts for recording it calls ensureActive → configureAudioSession,
+  // which resets the shared AVAudioSession back to Playback and strips microphone input.
+  // Disabling session management here hands full ownership to expo-audio, which already
+  // configures PlayAndRecord via setAudioModeAsync({ allowsRecording: true }).
+  useEffect(() => {
+    AudioManager.disableSessionManagement();
+  }, []);
+
   const socketRef = useRef<CallSocket | null>(null);
   const callIdRef = useRef<string | null>(null);
   // 1s interval that drives the visible countdown.
@@ -129,41 +137,14 @@ export function useAiCall(): UseAiCallResult {
   // playback position to drive `mouthOpen`.
   const envelopeRef = useRef<Float32Array | null>(null);
   const recordingRef = useRef(false);
-
-  // Stable across renders (only reads refs), so it can be passed straight
-  // into the `useAudioStream` hook below without re-subscribing the stream.
-  const onStreamBuffer = useCallback((buffer: AudioStreamBuffer) => {
-    if (!recordingRef.current || mutedRef.current) return;
-    const callId = callIdRef.current;
-    if (!callId) return;
-
-    const pcmMic = new Int16Array(buffer.data);
-    const pcm24k = resamplePcm16(pcmMic, buffer.sampleRate, REALTIME_SAMPLE_RATE);
-    socketRef.current?.emit('ai-call:audio', {
-      call_id: callId,
-      audio: bytesToBase64(int16ToBytes(pcm24k)),
-    });
-  }, []);
-
-  // expo-audio owns both playback (below) and mic capture here, so unlike the
-  // previous react-native-audio-api recorder there's no separate library
-  // fighting it for the iOS AVAudioSession.
-  const { stream } = useAudioStream({
-    sampleRate: MIC_SAMPLE_RATE,
-    channels: 1,
-    encoding: 'int16',
-    onBuffer: onStreamBuffer,
-  });
-  const streamRef = useRef(stream);
-  useEffect(() => {
-    streamRef.current = stream;
-  }, [stream]);
+  const recorderRef = useRef<AudioRecorder | null>(null);
+  const streamingOptsRef = useRef<any>(null);
 
   const stopMic = useCallback(async () => {
     if (recordingRef.current) {
       recordingRef.current = false;
       try {
-        streamRef.current?.stop();
+        recorderRef.current?.stop();
       } catch {
         // already stopped
       }
@@ -187,9 +168,15 @@ export function useAiCall(): UseAiCallResult {
         shouldRouteThroughEarpiece: false,
       });
       try {
-        streamRef.current?.stop();
+        recorderRef.current?.stop();
       } catch {}
-      streamRef.current?.start();
+      if (streamingOptsRef.current) {
+        const { callbackOptions, onAudioReadyCallback } = streamingOptsRef.current;
+        const rec = new AudioRecorder();
+        rec.onAudioReady(callbackOptions, onAudioReadyCallback);
+        recorderRef.current = rec;
+        rec.start();
+      }
     } catch {
       // session not resumable
     }
@@ -220,7 +207,7 @@ export function useAiCall(): UseAiCallResult {
     // Half-duplex: stop the mic while the reply plays. On iOS, pausing
     // leaves the recorder in a suspended state the session cannot reliably
     // resume from; a clean stop lets resumeMic restart fresh.
-    try { streamRef.current?.stop(); } catch {}
+    try { recorderRef.current?.stop(); } catch {}
 
     // Remove old player and null the ref before creating a new one to
     // avoid a stale-handle race on iOS.
@@ -314,19 +301,45 @@ export function useAiCall(): UseAiCallResult {
     }, 1000);
   }, [stopCountdown, teardown]);
 
-  // Open the mic and start streaming PCM16 chunks to the backend via
-  // `onStreamBuffer`. Declared before the socket-listener effect below since
-  // its `ai-call:started` handler calls it.
+  // Open the mic and stream upsampled PCM16 chunks to the backend. The opts
+  // are saved to streamingOptsRef so resumeMic can restart with the same
+  // config. Declared before the socket-listener effect below since its
+  // `ai-call:started` handler calls it.
   //
-  // `stream.start()` is a real native call (AVAudioSession on iOS) that can
+  // `rec.start()` is a real native call (AVAudioSession on iOS) that can
   // throw if the session is still transitioning right after permission was
   // just granted — e.g. while the connecting tone is still holding it. It's
   // invoked from an async socket handler, so an uncaught throw here becomes
   // an unhandled rejection, which is fatal in a production build.
   const beginStreaming = useCallback(async () => {
     recordingRef.current = true;
+
+    const callbackOptions = {
+      sampleRate: MIC_SAMPLE_RATE,
+      bufferLength: 4096,
+      channelCount: 1,
+    };
+
+    const onAudioReadyCallback = (event: { buffer: { getChannelData(ch: number): Float32Array } }) => {
+      if (!recordingRef.current || mutedRef.current) return;
+      const callId = callIdRef.current;
+      if (!callId) return;
+
+      const pcm16k = float32ToInt16(event.buffer.getChannelData(0));
+      const pcm24k = resamplePcm16(pcm16k, MIC_SAMPLE_RATE, REALTIME_SAMPLE_RATE);
+      socketRef.current?.emit('ai-call:audio', {
+        call_id: callId,
+        audio: bytesToBase64(int16ToBytes(pcm24k)),
+      });
+    };
+
+    streamingOptsRef.current = { callbackOptions, onAudioReadyCallback };
+
     try {
-      streamRef.current?.start();
+      const rec = new AudioRecorder();
+      rec.onAudioReady(callbackOptions, onAudioReadyCallback);
+      recorderRef.current = rec;
+      rec.start();
     } catch {
       recordingRef.current = false;
       teardown('Could not access the microphone. Please try again.');

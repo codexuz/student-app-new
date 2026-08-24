@@ -1,4 +1,4 @@
-import type { DrawerContentComponentProps } from 'expo-router/drawer';
+import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import {
   useThreadListItemDelete,
   useThreadListItemTrigger,

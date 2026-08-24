@@ -1,7 +1,7 @@
 const { withGradleProperties } = require('expo/config-plugins');
 
 /**
- * expo-build-properties only exposes enableProguardInReleaseBuilds (which
+ * expo-build-properties only exposes enableMinifyInReleaseBuilds (which
  * already runs R8, not legacy ProGuard) and enableShrinkResourcesInReleaseBuilds.
  * It has no toggle for R8 "full mode" or AGP's optimized resource shrinker,
  * so those two gradle.properties keys are added directly here.

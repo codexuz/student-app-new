@@ -2,13 +2,13 @@
   "expo": {
     "name": "Impulse Student App",
     "slug": "impulse-app",
-    "version": "1.3.3",
+    "version": "1.3.4",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "edu.impulse.uz",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "buildNumber": "33",
+      "buildNumber": "34",
       "icon": {
         "dark": "./assets/images/ios-dark.png",
         "light": "./assets/images/ios-light.png",
@@ -31,7 +31,7 @@
       "bitcode": false
     },
     "android": {
-      "versionCode": 33,
+      "versionCode": 34,
       "adaptiveIcon": {
         "backgroundColor": "#1055F8",
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -70,7 +70,7 @@
           "android": {
             "usesCleartextTraffic": true,
             "minSdkVersion": 24,
-            "enableProguardInReleaseBuilds": true,
+            "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
@@ -122,7 +122,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": false
+      "reactCompiler": true
     },
     "extra": {
       "router": {},

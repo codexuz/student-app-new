@@ -42,16 +42,12 @@ export function MicButton({ isRecording, processing, disabled, onPressIn, onPres
     if (isRecording) {
       ringScale.value = 1;
       ringOpacity.value = 0.45;
-      // eslint-disable-next-line react-hooks/immutability
       ringScale.value = withRepeat(withTiming(1.7, { duration: 1100, easing: Easing.out(Easing.ease) }), -1, false);
-      // eslint-disable-next-line react-hooks/immutability
       ringOpacity.value = withRepeat(withTiming(0, { duration: 1100, easing: Easing.out(Easing.ease) }), -1, false);
     } else {
       cancelAnimation(ringScale);
       cancelAnimation(ringOpacity);
-      // eslint-disable-next-line react-hooks/immutability
       ringScale.value = withTiming(1, { duration: 150 });
-      // eslint-disable-next-line react-hooks/immutability
       ringOpacity.value = withTiming(0, { duration: 150 });
     }
   }, [isRecording, ringScale, ringOpacity]);

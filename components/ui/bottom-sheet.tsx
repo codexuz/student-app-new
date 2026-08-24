@@ -190,7 +190,6 @@ export function BottomSheet({
   const scrollTo = useCallback(
     (destination: number) => {
       'worklet';
-      // eslint-disable-next-line react-hooks/immutability
       translateY.value = withTiming(destination, SLIDE_CONFIG);
     },
     [translateY]
@@ -236,14 +235,12 @@ export function BottomSheet({
         closestIndex = i;
       }
     }
-    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value, mutated via `.value` outside React's render cycle by design.
     currentSnapIndex.value = closestIndex;
     return closest;
   };
 
   const handlePress = () => {
     const nextIndex = (currentSnapIndex.value + 1) % snapPointsHeights.length;
-    // eslint-disable-next-line react-hooks/immutability
     currentSnapIndex.value = nextIndex;
     const destination = snapPointsHeights[nextIndex] - keyboardHeightSV.value;
     scrollTo(destination);
@@ -251,9 +248,7 @@ export function BottomSheet({
 
   const animateClose = () => {
     'worklet';
-    // eslint-disable-next-line react-hooks/immutability
     translateY.value = withTiming(0, SLIDE_CONFIG_CLOSE);
-    // eslint-disable-next-line react-hooks/immutability
     opacity.value = withTiming(0, { duration: 300 }, (finished) => {
       if (finished) {
         runOnJS(onClose)();
@@ -268,7 +263,6 @@ export function BottomSheet({
     .onUpdate((event) => {
       const newY = context.value.y + event.translationY;
       if (newY <= 0 && newY >= MAX_TRANSLATE_Y) {
-        // eslint-disable-next-line react-hooks/immutability
         translateY.value = newY;
       }
     })

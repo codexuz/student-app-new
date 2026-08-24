@@ -44,13 +44,11 @@ export function DuoButton({ children, onPress, disabled, color, textColor = '#ff
   const handlePressIn = () => {
     if (disabled) return;
     // Reanimated shared value — not React state, the compiler doesn't need to track it.
-    // eslint-disable-next-line react-hooks/immutability
     translateY.value = withTiming(DEPTH, { duration: 80, easing: Easing.out(Easing.quad) });
   };
 
   const handlePressOut = () => {
     if (disabled) return;
-    // eslint-disable-next-line react-hooks/immutability
     translateY.value = withTiming(0, { duration: 140, easing: Easing.out(Easing.quad) });
   };
 

@@ -2,7 +2,7 @@ import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider as RNThemeProvider,
-} from 'expo-router/react-navigation';
+} from '@react-navigation/native';
 import { useMemo } from 'react';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
