@@ -20,6 +20,7 @@
     "build:all": "eas build --platform all"
   },
   "dependencies": {
+    "@ai-sdk/react": "^4.0.69",
     "@assistant-ui/core": "^0.3.5",
     "@assistant-ui/react-ai-sdk": "^1.4.4",
     "@assistant-ui/react-native": "^0.1.33",
