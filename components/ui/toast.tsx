@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Dimensions, Platform, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -332,11 +332,11 @@ export function ToastProvider({ children, maxToasts = 3 }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
-      <GestureHandlerRootView style={containerStyle} pointerEvents='box-none'>
+      <View style={containerStyle} pointerEvents='box-none'>
         {toasts.map((item, index) => (
           <ToastItem key={item.id} {...item} index={index} onDismiss={dismissToast} />
         ))}
-      </GestureHandlerRootView>
+      </View>
     </ToastContext.Provider>
   );
 }
