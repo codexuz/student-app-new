@@ -138,6 +138,7 @@ export function SocialCards() {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    marginTop: SPACING.sm,
     gap: SPACING.md,
   },
   glowWrap: {

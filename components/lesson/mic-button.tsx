@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Mic, Square } from 'lucide-react-native';
 import Animated, {
@@ -34,6 +34,9 @@ export function MicButton({ isRecording, processing, disabled, onPressIn, onPres
   const red = useColor('red');
   const primaryForeground = useColor('primaryForeground');
   const isTapMode = !!onPress;
+  // Only starts recording once the long-press threshold fires — a quick tap
+  // that releases before then should do nothing, not start-and-immediately-stop.
+  const isHoldingRef = useRef(false);
 
   const ringScale = useSharedValue(1);
   const ringOpacity = useSharedValue(0);
@@ -64,8 +67,24 @@ export function MicButton({ isRecording, processing, disabled, onPressIn, onPres
       <Animated.View style={[styles.ring, { backgroundColor: color }, ringStyle]} />
       <Pressable
         onPress={isTapMode && !disabled ? onPress : undefined}
-        onPressIn={!isTapMode && !disabled ? onPressIn : undefined}
-        onPressOut={!isTapMode && !disabled ? onPressOut : undefined}
+        onLongPress={
+          !isTapMode && !disabled
+            ? () => {
+                isHoldingRef.current = true;
+                onPressIn?.();
+              }
+            : undefined
+        }
+        delayLongPress={300}
+        onPressOut={
+          !isTapMode && !disabled
+            ? () => {
+                if (!isHoldingRef.current) return;
+                isHoldingRef.current = false;
+                onPressOut?.();
+              }
+            : undefined
+        }
         disabled={disabled}
         style={[styles.button, { backgroundColor: color, opacity: disabled && !processing ? 0.5 : 1 }]}
         accessibilityRole='button'

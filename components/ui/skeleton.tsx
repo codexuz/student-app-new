@@ -41,7 +41,7 @@ export const Skeleton = React.memo(function Skeleton({
       -1,
       true
     );
-  }, []);
+  }, [opacity]);
 
   return (
     <Animated.View

@@ -9,13 +9,13 @@ import {
 import { Dimensions, Platform, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { AlertCircle, Check, Info, X } from 'lucide-react-native';
 
 import { Text } from '@/components/ui/text';
@@ -114,7 +114,7 @@ function ToastItem({ id, title, description, variant = 'default', onDismiss, ind
   const dismiss = useCallback(() => {
     translateY.value = withTiming(-150, { duration: 300 });
     opacity.value = withTiming(0, { duration: 250 }, (finished) => {
-      if (finished) runOnJS(onDismiss)(id);
+      if (finished) scheduleOnRN(onDismiss, id);
     });
     scale.value = 1;
   }, [id, onDismiss, opacity, scale, translateY]);
@@ -131,7 +131,7 @@ function ToastItem({ id, title, description, variant = 'default', onDismiss, ind
           duration: 250,
         });
         opacity.value = withTiming(0, { duration: 250 }, (finished) => {
-          if (finished) runOnJS(onDismiss)(id);
+          if (finished) scheduleOnRN(onDismiss, id);
         });
       } else {
         translateX.value = withSpring(0, SPRING_CONFIG);

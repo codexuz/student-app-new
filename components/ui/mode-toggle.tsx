@@ -4,11 +4,11 @@ import { useModeToggle } from '@/hooks/useModeToggle';
 import { Moon, Sun } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 type Props = {
   variant?: ButtonVariant;
@@ -31,7 +31,7 @@ export const ModeToggle = ({
   useEffect(() => {
     // Animate icon change
     scale.value = withTiming(0, { duration: 150 }, () => {
-      runOnJS(setShowIcon)(isDark ? 'moon' : 'sun');
+      scheduleOnRN(setShowIcon, isDark ? 'moon' : 'sun');
       scale.value = withTiming(1, { duration: 150 });
     });
 
@@ -39,7 +39,7 @@ export const ModeToggle = ({
     if (!isDark) {
       rotation.value = withTiming(rotation.value + 180, { duration: 300 });
     }
-  }, [isDark]);
+  }, [isDark, rotation, scale]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

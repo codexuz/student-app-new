@@ -395,6 +395,8 @@ export interface GroupedInputItemProps extends Omit<TextInputProps, 'style'> {
   rows?: number; // Only used when type="textarea"
 }
 
+Input.displayName = 'Input';
+
 export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
   (
     {
@@ -609,3 +611,4 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
     return renderItemContent();
   }
 );
+GroupedInputItem.displayName = 'GroupedInputItem';

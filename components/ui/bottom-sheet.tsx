@@ -18,11 +18,11 @@ import {
 } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
@@ -180,7 +180,7 @@ export function BottomSheet({
       translateY.value = withTiming(0, SLIDE_CONFIG_CLOSE);
       opacity.value = withTiming(0, { duration: 300 }, (finished) => {
         if (finished) {
-          runOnJS(setModalVisible)(false);
+          scheduleOnRN(setModalVisible, false);
         }
       });
     }
@@ -214,7 +214,7 @@ export function BottomSheet({
       }
       scrollTo(destination);
     }
-  }, [keyboardHeight, isKeyboardVisible, isVisible, currentSnapIndex.value, keyboardHeightSV, scrollTo, snapPointsHeights]);
+  }, [keyboardHeight, isKeyboardVisible, isVisible, currentSnapIndex, keyboardHeightSV, scrollTo, snapPointsHeights]);
   // --- END: NEW KEYBOARD HANDLING LOGIC ---
 
   const findClosestSnapPoint = (currentY: number) => {
@@ -251,7 +251,7 @@ export function BottomSheet({
     translateY.value = withTiming(0, SLIDE_CONFIG_CLOSE);
     opacity.value = withTiming(0, { duration: 300 }, (finished) => {
       if (finished) {
-        runOnJS(onClose)();
+        scheduleOnRN(onClose);
       }
     });
   };
@@ -325,7 +325,7 @@ export function BottomSheet({
               rBottomSheetStyle={rBottomSheetStyle}
               cardColor={cardColor}
               mutedColor={mutedColor}
-              onHandlePress={() => runOnJS(handlePress)()}
+              onHandlePress={() => scheduleOnRN(handlePress)}
             >
               {children}
             </BottomSheetContent>
@@ -337,7 +337,7 @@ export function BottomSheet({
                 rBottomSheetStyle={rBottomSheetStyle}
                 cardColor={cardColor}
                 mutedColor={mutedColor}
-                onHandlePress={() => runOnJS(handlePress)()}
+                onHandlePress={() => scheduleOnRN(handlePress)}
               >
                 {children}
               </BottomSheetContent>

@@ -130,7 +130,6 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.sm,
   },
   container: {
-    flexGrow: 1,
     gap: SPACING.md,
     padding: SPACING.md,
   },

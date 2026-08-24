@@ -22,11 +22,11 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, {
   Extrapolation,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 // Types
 interface TabsContextType {
@@ -111,17 +111,20 @@ export function Tabs({
     }
   }, [value, isControlled, internalActiveTab]);
 
-  const setActiveTab = (newValue: string) => {
-    if (!isControlled) {
-      // Uncontrolled mode: update internal state
-      setInternalActiveTab(newValue);
-    }
+  const setActiveTab = useCallback(
+    (newValue: string) => {
+      if (!isControlled) {
+        // Uncontrolled mode: update internal state
+        setInternalActiveTab(newValue);
+      }
 
-    // Call onValueChange callback if provided (works in both controlled and uncontrolled modes)
-    if (onValueChange) {
-      onValueChange(newValue);
-    }
-  };
+      // Call onValueChange callback if provided (works in both controlled and uncontrolled modes)
+      if (onValueChange) {
+        onValueChange(newValue);
+      }
+    },
+    [isControlled, onValueChange]
+  );
 
   const registerTab = useCallback((tabValue: string) => {
     setTabValues((prev) => {
@@ -274,10 +277,10 @@ function CarouselContainer({
       if (shouldChangeTab) {
         if (translation > 0 && currentIndex > 0) {
           // Swiped right - go to previous tab
-          runOnJS(onSwipe)('prev');
+          scheduleOnRN(onSwipe, 'prev');
         } else if (translation < 0 && currentIndex < tabValues.length - 1) {
           // Swiped left - go to next tab
-          runOnJS(onSwipe)('next');
+          scheduleOnRN(onSwipe, 'next');
         }
       }
 

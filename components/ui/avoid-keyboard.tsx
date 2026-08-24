@@ -60,6 +60,7 @@ export const AvoidKeyboard = ({ offset = 0, duration = 0, fastHide = false }: Pr
     duration,
     fastHide,
     reduceMotion,
+    keyboardValue,
   ]);
 
   // Animated style

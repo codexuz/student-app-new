@@ -26,7 +26,7 @@ export function RoadmapHeader({ percentage }: RoadmapHeaderProps) {
   return (
     <LinearGradient colors={['#DC2626', '#991B1B']} style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.replace('/(tabs)/(home)')} hitSlop={8}>
+        <Pressable onPress={() => router.dismissTo('/(tabs)/(home)')} hitSlop={8}>
           <BlurView intensity={40} tint='dark' style={styles.closeButton}>
             <Icon name={X} size={18} color='#fff' />
           </BlurView>
