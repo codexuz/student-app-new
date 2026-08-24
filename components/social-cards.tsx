@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Linking, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Carousel, { ICarouselInstance, Pagination } from 'react-native-reanimated-carousel';
@@ -71,7 +71,7 @@ export function SocialCards() {
       <Carousel
         ref={carouselRef}
         loop
-        autoPlay
+        autoPlay={Platform.OS !== 'ios'}
         autoPlayInterval={3800}
         scrollAnimationDuration={800}
         width={carouselWidth}

@@ -105,7 +105,6 @@ export default function HomeScreen() {
 
       <AiPracticeCarousel
         cards={buildDefaultAiCards({
-          onChatPress: () => router.push('/(ai-chat)/chat'),
           onCallPress: () => router.push('/ai-call'),
         })}
       />

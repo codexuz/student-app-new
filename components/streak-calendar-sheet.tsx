@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet } from 'react-native';
+import { Dimensions, Platform, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import LottieView from 'lottie-react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Animated, {
@@ -170,13 +171,21 @@ export function StreakCalendarSheet({ isVisible, onClose, streak }: StreakCalend
   return (
     <BottomSheet isVisible={isVisible} onClose={onClose} snapPoints={[0.75]}>
       <View style={styles.streakHeader}>
-        <LottieView
-          ref={lottieRef}
-          source={require('@/assets/animations/fire.json')}
-          loop
-          autoPlay
-          style={styles.fireLottie}
-        />
+        {Platform.OS === 'ios' ? (
+          <Image
+            source={require('@/assets/images/fire2.png')}
+            style={styles.fireLottie}
+            contentFit='contain'
+          />
+        ) : (
+          <LottieView
+            ref={lottieRef}
+            source={require('@/assets/animations/fire.json')}
+            loop
+            autoPlay
+            style={styles.fireLottie}
+          />
+        )}
         <View style={styles.countWrap}>
           <AnimatedStreakCount value={streak} color={orange} />
         </View>

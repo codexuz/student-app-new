@@ -18,7 +18,7 @@ import {
   useWindowDimensions,
   ViewStyle,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -331,7 +331,7 @@ function CarouselContainer({
 
   return (
     <GestureDetector gesture={panGesture}>
-      <View style={{ overflow: 'hidden' }}>
+      <GestureHandlerRootView style={{ overflow: 'hidden' }}>
         {/* Previous content */}
         {previousTab && (
           <Animated.View
@@ -380,7 +380,7 @@ function CarouselContainer({
             {contentMap.current[nextTab]}
           </Animated.View>
         )}
-      </View>
+      </GestureHandlerRootView>
     </GestureDetector>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
@@ -43,6 +43,10 @@ export function AiPracticeCard({
   const glow = useSharedValue(0.35);
 
   useEffect(() => {
+    if (Platform.OS === 'ios') {
+      glow.value = 0.55;
+      return;
+    }
     glow.value = withRepeat(
       withTiming(0.75, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
       -1,
@@ -101,6 +105,23 @@ interface AiPracticeCarouselProps {
 }
 
 export function AiPracticeCarousel({
+  cards,
+  intervalMs = 3500,
+  resumeDelayMs = 4000,
+}: AiPracticeCarouselProps) {
+  if (Platform.OS === 'ios') {
+    const { key, ...card } = cards.find((c) => c.key === 'ai-call') ?? cards[cards.length - 1];
+    return (
+      <View style={{ height: CARD_HEIGHT }}>
+        <AiPracticeCard key={key} {...card} />
+      </View>
+    );
+  }
+
+  return <AnimatedAiPracticeCarousel cards={cards} intervalMs={intervalMs} resumeDelayMs={resumeDelayMs} />;
+}
+
+function AnimatedAiPracticeCarousel({
   cards,
   intervalMs = 3500,
   resumeDelayMs = 4000,
@@ -192,19 +213,9 @@ export function AiPracticeCarousel({
 }
 
 export function buildDefaultAiCards(opts: {
-  onChatPress: () => void;
   onCallPress: () => void;
 }): AiPracticeCardData[] {
   return [
-    {
-      key: 'ai-chat',
-      title: 'Chat with IMPULSE AI',
-      description: 'Talk with AI to improve your English skills',
-      icon: Bot,
-      colors: ['#f63582', '#c90741'],
-      glowColor: '#f63582',
-      onPress: opts.onChatPress,
-    },
     {
       key: 'ai-call',
       title: 'Practice with AI Call',

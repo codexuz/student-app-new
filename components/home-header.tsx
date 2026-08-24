@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import LottieView, { type AnimationObject } from 'lottie-react-native';
@@ -52,10 +52,14 @@ function StreakChip({ value, onPress }: { value: number; onPress: () => void }) 
 
   return (
     <Pressable style={[styles.chip, { backgroundColor: card }]} onPress={onPress}>
-      <AutoPlayLottie
-        source={require('@/assets/animations/fire.json')}
-        style={styles.statLottie}
-      />
+      {Platform.OS === 'ios' ? (
+        <Image source={require('@/assets/images/fire2.png')} style={styles.statLottie} contentFit='contain' />
+      ) : (
+        <AutoPlayLottie
+          source={require('@/assets/animations/fire.json')}
+          style={styles.statLottie}
+        />
+      )}
       <Text variant='body' style={[styles.chipText, { color: foreground }]}>
         {formatAmount(value)}
       </Text>
@@ -69,11 +73,19 @@ function CoinsChip({ value, onPress }: { value: number; onPress: () => void }) {
 
   return (
     <Pressable style={[styles.chip, { backgroundColor: card }]} onPress={onPress}>
-      <AutoPlayLottie
-        source={require('@/assets/animations/coin.json')}
-        style={styles.coinLottie}
-        loop={false}
-      />
+      {Platform.OS === 'ios' ? (
+        <Image
+          source={require('@/assets/images/coin-noanimted.png')}
+          style={styles.coinLottie}
+          contentFit='contain'
+        />
+      ) : (
+        <AutoPlayLottie
+          source={require('@/assets/animations/coin.json')}
+          style={styles.coinLottie}
+          loop={false}
+        />
+      )}
       <Text variant='body' style={[styles.chipText, { color: foreground }]}>
         {formatAmount(value)}
       </Text>

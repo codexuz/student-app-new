@@ -21,7 +21,6 @@ import { StatusBar } from 'expo-status-bar';
 import { setBackgroundColorAsync } from 'expo-system-ui';
 import React, { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
@@ -37,26 +36,24 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        {/* `storage` makes the light/dark choice survive a restart. SecureStore
-            has no web implementation, so on web this degrades to no persistence
-            rather than erroring — the toggle itself still works there. */}
-        <PreferencesProvider>
-          <ThemeProvider storage={SecureStore}>
-            <ToastProvider>
-              <AuthProvider>
-                <NotificationPermissionProvider>
-                  <MediaPermissionProvider>
-                    <RootNavigator />
-                  </MediaPermissionProvider>
-                </NotificationPermissionProvider>
-              </AuthProvider>
-            </ToastProvider>
-          </ThemeProvider>
-        </PreferencesProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      {/* `storage` makes the light/dark choice survive a restart. SecureStore
+          has no web implementation, so on web this degrades to no persistence
+          rather than erroring — the toggle itself still works there. */}
+      <PreferencesProvider>
+        <ThemeProvider storage={SecureStore}>
+          <ToastProvider>
+            <AuthProvider>
+              <NotificationPermissionProvider>
+                <MediaPermissionProvider>
+                  <RootNavigator />
+                </MediaPermissionProvider>
+              </NotificationPermissionProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </PreferencesProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -117,7 +114,6 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false, headerBackButtonDisplayMode: 'minimal' }}>
         <Stack.Protected guard={isAuthenticated && !shouldPromptForNotifications}>
           <Stack.Screen name='(tabs)' options={{ headerShown: false, title: 'Home' }} />
-          <Stack.Screen name='(ai-chat)' options={{ headerShown: false }} />
           <Stack.Screen
             name='edit-profile'
             options={{
