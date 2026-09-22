@@ -255,8 +255,11 @@ half4 main(float2 fragCoord) {
 `;
 
 // Compile once. Skia.RuntimeEffect.Make returns null if compilation fails.
-const orbEffect = Skia.RuntimeEffect.Make(SKSL);
-if (!orbEffect) {
+const orbEffect =
+  typeof Skia !== "undefined" && Skia?.RuntimeEffect
+    ? Skia.RuntimeEffect.Make(SKSL)
+    : null;
+if (!orbEffect && typeof Skia !== "undefined") {
   // Surfaces a clear error during development instead of a silent blank canvas.
   // eslint-disable-next-line no-console
   console.error("[VoiceOrb] SKSL compilation failed");
