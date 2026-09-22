@@ -171,7 +171,7 @@ export function StreakCalendarSheet({ isVisible, onClose, streak }: StreakCalend
   return (
     <BottomSheet isVisible={isVisible} onClose={onClose} snapPoints={[0.75]}>
       <View style={styles.streakHeader}>
-        {Platform.OS === 'ios' ? (
+        {Platform.OS === 'ios' || Platform.OS === 'web' ? (
           <Image
             source={require('@/assets/images/fire2.png')}
             style={styles.fireLottie}
@@ -184,6 +184,8 @@ export function StreakCalendarSheet({ isVisible, onClose, streak }: StreakCalend
             loop
             autoPlay
             style={styles.fireLottie}
+            // @ts-ignore
+            webStyle={{ width: '100%', height: '100%' }}
           />
         )}
         <View style={styles.countWrap}>

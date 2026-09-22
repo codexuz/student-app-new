@@ -14,7 +14,7 @@ import { SPACING } from '@/theme/globals';
 
 interface AutoPlayLottieProps {
   source: AnimationObject;
-  style: { width: number; height: number };
+  style: { width: number; height: number; [key: string]: any };
   loop?: boolean;
 }
 
@@ -37,7 +37,18 @@ function AutoPlayLottie({ source, style, loop = true }: AutoPlayLottieProps) {
     }, [])
   );
 
-  return <LottieView ref={ref} source={source} loop={loop} style={style} />;
+  return (
+    <View style={[{ width: style.width, height: style.height, overflow: 'hidden' }, style]}>
+      <LottieView
+        ref={ref}
+        source={source}
+        loop={loop}
+        style={style}
+        // @ts-ignore
+        webStyle={{ width: '100%', height: '100%' }}
+      />
+    </View>
+  );
 }
 
 function formatAmount(amount: number): string {
@@ -52,8 +63,12 @@ function StreakChip({ value, onPress }: { value: number; onPress: () => void }) 
 
   return (
     <Pressable style={[styles.chip, { backgroundColor: card }]} onPress={onPress}>
-      {Platform.OS === 'ios' ? (
-        <Image source={require('@/assets/images/fire2.png')} style={styles.statLottie} contentFit='contain' />
+      {Platform.OS === 'ios' || Platform.OS === 'web' ? (
+        <Image
+          source={require('@/assets/images/fire2.png')}
+          style={styles.statLottie}
+          contentFit='contain'
+        />
       ) : (
         <AutoPlayLottie
           source={require('@/assets/animations/fire.json')}
@@ -73,7 +88,7 @@ function CoinsChip({ value, onPress }: { value: number; onPress: () => void }) {
 
   return (
     <Pressable style={[styles.chip, { backgroundColor: card }]} onPress={onPress}>
-      {Platform.OS === 'ios' ? (
+      {Platform.OS === 'ios' || Platform.OS === 'web' ? (
         <Image
           source={require('@/assets/images/coin-noanimted.png')}
           style={styles.coinLottie}
@@ -197,6 +212,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
+    height: 32,
+    maxHeight: 32,
   },
   chipText: {
     fontWeight: '700',
@@ -204,13 +221,13 @@ const styles = StyleSheet.create({
     minWidth: 28,
   },
   statLottie: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
   },
   coinLottie: {
-    width: 44,
-    height: 44,
-    margin: -8,
+    width: Platform.OS === 'web' ? 24 : 44,
+    height: Platform.OS === 'web' ? 24 : 44,
+    margin: Platform.OS === 'web' ? 0 : -8,
   },
   helloRow: {
     flexDirection: 'row',
