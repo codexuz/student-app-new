@@ -5,6 +5,7 @@ import {
   useMemo,
   useSyncExternalStore,
 } from 'react';
+import { Platform } from 'react-native';
 import type { PermissionStatus } from 'expo-notifications';
 
 import {
@@ -64,7 +65,11 @@ export function NotificationPermissionProvider({
       // Only worth showing once someone's actually signed in — push tokens
       // are registered per-user, and there's nothing to ask for otherwise.
       shouldPrompt:
-        !isLoading && !!userId && snapshot.status === 'undetermined' && !snapshot.dismissed,
+        Platform.OS !== 'web' &&
+        !isLoading &&
+        !!userId &&
+        snapshot.status === 'undetermined' &&
+        !snapshot.dismissed,
       requestPermission,
       dismiss,
       refresh,

@@ -6,14 +6,16 @@ import { Platform } from 'react-native';
 import { apiRequest } from '@/lib/api/client';
 
 // Controls how notifications are presented while the app is foregrounded.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 const projectId: string | undefined =
   Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
@@ -119,6 +121,7 @@ export async function registerForPushNotifications(userId: string): Promise<stri
  * re-fetch the Expo push token and persist it.
  */
 export function subscribeToPushTokenRefresh(userId: string): () => void {
+  if (Platform.OS === 'web') return () => {};
   const subscription = Notifications.addPushTokenListener(async () => {
     const token = await getToken();
     if (token && userId) {
@@ -130,6 +133,7 @@ export function subscribeToPushTokenRefresh(userId: string): () => void {
 
 /** Setup foreground notification handler. */
 export function setupForegroundHandler(): () => void {
+  if (Platform.OS === 'web') return () => {};
   const subscription = Notifications.addNotificationReceivedListener(() => {
     // Handle foreground notifications (update app state, badges, etc.)
   });
@@ -165,6 +169,7 @@ export function resolveNotificationPath(data: unknown): string | null {
 
 /** Fires when the user taps a notification while the app is running. */
 export function subscribeToNotificationOpened(onOpen: (path: string) => void): () => void {
+  if (Platform.OS === 'web') return () => {};
   const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
     const path = resolveNotificationPath(response.notification.request.content.data);
     if (path) onOpen(path);
@@ -174,6 +179,7 @@ export function subscribeToNotificationOpened(onOpen: (path: string) => void): (
 
 /** Whether the current app launch was a cold start triggered by tapping a notification. */
 export async function getInitialNotificationPath(): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
   try {
     const response = await Notifications.getLastNotificationResponseAsync();
     if (!response) return null;
