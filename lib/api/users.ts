@@ -12,13 +12,23 @@ export async function uploadAvatar(
   file: UploadableImage
 ): Promise<{ avatar_url: string }> {
   const formData = new FormData();
-  // Expo's fetch polyfill only accepts a genuine Blob-like part (something
-  // with a `.bytes()` method) for multipart uploads — the classic React
-  // Native `{ uri, name, type }` shape throws "Unsupported FormDataPart
-  // implementation" under it. `expo-file-system`'s `File` implements that
-  // interface, so native picks get wrapped in one; the web `File` from the
-  // browser's file input already satisfies it as-is.
-  const part = Platform.OS === 'web' ? file : new ExpoFile((file as { uri: string }).uri);
+  let part: Blob | File | ExpoFile;
+  if (Platform.OS !== 'web') {
+    part = new ExpoFile((file as { uri: string }).uri);
+  } else if ((typeof File !== 'undefined' && file instanceof File) || (typeof Blob !== 'undefined' && file instanceof Blob)) {
+    part = file;
+  } else if (typeof file === 'object' && file !== null && 'uri' in file) {
+    try {
+      const res = await fetch(file.uri);
+      const blob = await res.blob();
+      const rawMime = (blob.type || file.type || 'image/jpeg').split(';')[0].trim().toLowerCase();
+      part = new File([blob], file.name || 'avatar.jpg', { type: rawMime });
+    } catch {
+      part = file as unknown as Blob;
+    }
+  } else {
+    part = file as unknown as Blob;
+  }
   formData.append('file', part as unknown as Blob);
 
   return apiUpload<{ avatar_url: string }>(`/users/${userId}/upload-avatar`, formData);

@@ -363,7 +363,8 @@ export default function SpeakingQAScreen() {
         [currentIndex]: { question: currentQuestion.question, transcription: text, audioUrl: url },
       }));
       feedback('selection');
-    } catch {
+    } catch (error) {
+      if (__DEV__) console.error('Speaking audio processing failed:', error);
       toast.error('Something went wrong', 'Could not process your recording. Please try again.');
     } finally {
       setProcessing(false);

@@ -138,7 +138,8 @@ export default function PronunciationDrillScreen() {
       feedback(score >= 60 ? 'success' : 'warning');
       if (score >= 60) playCorrect();
       else playIncorrect();
-    } catch {
+    } catch (error) {
+      if (__DEV__) console.error('Pronunciation audio processing failed:', error);
       toast.error('Something went wrong', 'Could not process your recording. Please try again.');
     } finally {
       setProcessing(false);
