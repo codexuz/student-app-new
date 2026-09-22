@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { router } from 'expo-router';
 
 import {
@@ -16,7 +17,7 @@ export function useNotifications() {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || Platform.OS === 'web') return;
 
     let isMounted = true;
 

@@ -15,6 +15,7 @@ import { ThemeProvider } from '@/providers/theme-provider';
 import { Colors } from '@/theme/colors';
 import * as NavigationBar from 'expo-navigation-bar';
 import { Stack } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -39,11 +40,10 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        {/* `storage` makes the light/dark choice survive a restart. SecureStore
-            has no web implementation, so on web this degrades to no persistence
-            rather than erroring — the toggle itself still works there. */}
+        {/* `storage` makes the light/dark choice survive a restart. Uses AsyncStorage on web
+            and SecureStore on native mobile. */}
         <PreferencesProvider>
-          <ThemeProvider storage={SecureStore}>
+          <ThemeProvider storage={Platform.OS === 'web' ? AsyncStorage : SecureStore}>
             <ToastProvider>
               <AuthProvider>
                 <NotificationPermissionProvider>
