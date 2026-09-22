@@ -3,12 +3,6 @@ import { Dimensions, Platform, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import LottieView from 'lottie-react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
@@ -41,24 +35,11 @@ const DAY_CELL_SIZE =
   (Dimensions.get('window').width - SHEET_HORIZONTAL_PADDING * 2 - CALENDAR_CARD_PADDING * 2) / 7;
 const DAY_CIRCLE_SIZE = Math.round(DAY_CELL_SIZE * 0.78);
 
-// Shows the streak count directly (no count-up animation, which would take
-// longer and longer to settle as the streak grows) with just a UI-thread
-// scale "pop" whenever the value changes.
 function AnimatedStreakCount({ value, color }: { value: number; color: string }) {
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    scale.value = withSequence(withTiming(1.15, { duration: 120 }), withTiming(1, { duration: 200 }));
-  }, [value, scale]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <Animated.Text style={[styles.countText, { color }, animatedStyle]}>
+    <Text style={[styles.countText, { color }]}>
       {value}
-    </Animated.Text>
+    </Text>
   );
 }
 

@@ -3,11 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedGradientBorder } from '@/components/ai-call/AnimatedGradientBorder';
 import { useColor } from '@/hooks/useColor';
@@ -65,57 +60,43 @@ function PremiumCard({
   textMuted: string;
   card: string;
 }) {
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <Animated.View style={animatedStyle}>
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={() => {
-          scale.value = withSpring(0.97, { damping: 18, stiffness: 260 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 14, stiffness: 200 });
-        }}
-        onPress={() => router.push(`/ai-call/teacher?mode=${cardDef.mode}` as never)}
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => router.push(`/ai-call/teacher?mode=${cardDef.mode}` as never)}
+    >
+      <AnimatedGradientBorder
+        colors={cardDef.borderColors}
+        borderRadius={22}
+        borderWidth={1.5}
+        style={styles.borderShadow}
       >
-        <AnimatedGradientBorder
-          colors={cardDef.borderColors}
-          borderRadius={22}
-          borderWidth={1.5}
-          duration={5000}
-          style={styles.borderShadow}
-        >
-          <View style={[styles.card, { backgroundColor: card }]}>
-            <View style={styles.cardTop}>
-              <LinearGradient
-                colors={[cardDef.gradientStart, cardDef.gradientEnd]}
-                style={styles.iconWrap}
-              >
-                <Ionicons name={cardDef.icon} size={26} color="#fff" />
-              </LinearGradient>
-              <View style={[styles.chevronWrap, { backgroundColor: accent + '14' }]}>
-                <Ionicons name="chevron-forward" size={16} color={accent} />
-              </View>
-            </View>
-
-            <Text style={[styles.cardTitle, { color: text }]}>{cardDef.title}</Text>
-            <Text style={[styles.cardSubtitle, { color: accent }]}>{cardDef.subtitle}</Text>
-            <Text style={[styles.cardDesc, { color: textMuted }]}>{cardDef.description}</Text>
-
-            <View style={styles.cardFooter}>
-              <View style={[styles.pill, { backgroundColor: accent + '16' }]}>
-                <Ionicons name="time-outline" size={12} color={accent} />
-                <Text style={[styles.pillText, { color: accent }]}>20 min</Text>
-              </View>
+        <View style={[styles.card, { backgroundColor: card }]}>
+          <View style={styles.cardTop}>
+            <LinearGradient
+              colors={[cardDef.gradientStart, cardDef.gradientEnd]}
+              style={styles.iconWrap}
+            >
+              <Ionicons name={cardDef.icon} size={26} color="#fff" />
+            </LinearGradient>
+            <View style={[styles.chevronWrap, { backgroundColor: accent + '14' }]}>
+              <Ionicons name="chevron-forward" size={16} color={accent} />
             </View>
           </View>
-        </AnimatedGradientBorder>
-      </TouchableOpacity>
-    </Animated.View>
+
+          <Text style={[styles.cardTitle, { color: text }]}>{cardDef.title}</Text>
+          <Text style={[styles.cardSubtitle, { color: accent }]}>{cardDef.subtitle}</Text>
+          <Text style={[styles.cardDesc, { color: textMuted }]}>{cardDef.description}</Text>
+
+          <View style={styles.cardFooter}>
+            <View style={[styles.pill, { backgroundColor: accent + '16' }]}>
+              <Ionicons name="time-outline" size={12} color={accent} />
+              <Text style={[styles.pillText, { color: accent }]}>20 min</Text>
+            </View>
+          </View>
+        </View>
+      </AnimatedGradientBorder>
+    </TouchableOpacity>
   );
 }
 

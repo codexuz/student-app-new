@@ -1,18 +1,10 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import React from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
 import { Bot, Phone, LucideProps } from 'lucide-react-native';
 
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { View } from '@/components/ui/view';
 import { SPACING } from '@/theme/globals';
 
 const CARD_HEIGHT = 76;
@@ -40,35 +32,8 @@ export function AiPracticeCard({
   glowColor,
   onPress,
 }: AiPracticeCardProps) {
-  const glow = useSharedValue(0.35);
-
-  useEffect(() => {
-    if (Platform.OS === 'ios') {
-      glow.value = 0.55;
-      return;
-    }
-    glow.value = withRepeat(
-      withTiming(0.75, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true
-    );
-  }, [glow]);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    shadowColor: glowColor,
-    shadowOpacity: glow.value,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 0,
-    // iOS only carves the shadow to `borderRadius` when this view actually
-    // paints something opaque — otherwise it casts a square bounding-box
-    // shadow behind the rounded gradient card, showing as a hard-edged
-    // "layer" peeking out past the corners.
-    backgroundColor: colors[0],
-  }));
-
   return (
-    <Animated.View style={[styles.glowWrap, glowStyle]}>
+    <View style={[styles.glowWrap, { backgroundColor: colors[0] }]}>
       <Pressable onPress={onPress} style={styles.pressable}>
         <LinearGradient
           colors={colors}
@@ -94,7 +59,7 @@ export function AiPracticeCard({
           </View>
         </LinearGradient>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -106,108 +71,15 @@ interface AiPracticeCarouselProps {
 
 export function AiPracticeCarousel({
   cards,
-  intervalMs = 3500,
-  resumeDelayMs = 4000,
 }: AiPracticeCarouselProps) {
-  if (Platform.OS === 'ios') {
-    const { key, ...card } = cards.find((c) => c.key === 'ai-call') ?? cards[cards.length - 1];
-    return (
-      <View style={{ height: CARD_HEIGHT }}>
-        <AiPracticeCard key={key} {...card} />
-      </View>
-    );
-  }
+  const cardData = cards.find((c) => c.key === 'ai-call') ?? cards[cards.length - 1];
+  if (!cardData) return null;
 
-  return <AnimatedAiPracticeCarousel cards={cards} intervalMs={intervalMs} resumeDelayMs={resumeDelayMs} />;
-}
-
-function AnimatedAiPracticeCarousel({
-  cards,
-  intervalMs = 3500,
-  resumeDelayMs = 4000,
-}: AiPracticeCarouselProps) {
-  const scrollRef = useRef<Animated.ScrollView>(null);
-  const indexRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const loopCards = cards.length > 1 ? [...cards, cards[0]] : cards;
-
-  const advance = useCallback(() => {
-    const rawNext = indexRef.current + 1;
-    indexRef.current = rawNext;
-    scrollRef.current?.scrollTo({ y: rawNext * CARD_HEIGHT, animated: true });
-
-    // When we've scrolled onto the appended duplicate of the first card,
-    // silently snap back to the real first card so the next scrollTo can
-    // move forward again instead of animating backwards.
-    if (rawNext === cards.length) {
-      setTimeout(() => {
-        indexRef.current = 0;
-        scrollRef.current?.scrollTo({ y: 0, animated: false });
-      }, 350);
-    }
-  }, [cards.length]);
-
-  const startAutoplay = useCallback(() => {
-    if (cards.length <= 1) return;
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(advance, intervalMs);
-  }, [advance, cards.length, intervalMs]);
-
-  const pauseAutoplay = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
-    resumeTimeoutRef.current = setTimeout(startAutoplay, resumeDelayMs);
-  }, [resumeDelayMs, startAutoplay]);
-
-  useEffect(() => {
-    startAutoplay();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
-    };
-  }, [startAutoplay]);
-
-  const handleMomentumEnd = useCallback(
-    (e: any) => {
-      const y = e.nativeEvent.contentOffset.y;
-      const next = Math.round(y / CARD_HEIGHT);
-      if (next < cards.length) {
-        indexRef.current = next;
-      }
-    },
-    [cards.length]
-  );
+  const { key, ...card } = cardData;
 
   return (
-    <View style={styles.carouselRow}>
-      <Animated.ScrollView
-        ref={scrollRef}
-        style={styles.scroll}
-        contentContainerStyle={{ height: CARD_HEIGHT * loopCards.length }}
-        showsVerticalScrollIndicator={false}
-        pagingEnabled
-        snapToInterval={CARD_HEIGHT}
-        decelerationRate='fast'
-        scrollEventThrottle={16}
-        onScrollBeginDrag={pauseAutoplay}
-        onMomentumScrollEnd={handleMomentumEnd}
-      >
-        {loopCards.map(({ key, ...card }, i) => (
-          <View key={`${key}-${i}`} style={{ height: CARD_HEIGHT }}>
-            <AiPracticeCard
-              {...card}
-              onPress={() => {
-                pauseAutoplay();
-                card.onPress();
-              }}
-            />
-          </View>
-        ))}
-      </Animated.ScrollView>
+    <View style={{ height: CARD_HEIGHT }}>
+      <AiPracticeCard key={key} {...card} />
     </View>
   );
 }
@@ -230,19 +102,14 @@ export function buildDefaultAiCards(opts: {
 }
 
 const styles = StyleSheet.create({
-  carouselRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  scroll: {
-    height: CARD_HEIGHT,
-    overflow: 'hidden',
-  },
   glowWrap: {
     height: CARD_HEIGHT,
     borderRadius: CARD_RADIUS,
     elevation: 0,
+    shadowColor: '#645fff',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
   },
   pressable: {
     flex: 1,
